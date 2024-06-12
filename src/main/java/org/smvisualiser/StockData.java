@@ -1,28 +1,29 @@
 package org.smvisualiser;
 
-import yahoofinance.Stock;
-import yahoofinance.YahooFinance;
+import kong.unirest.HttpResponse;
+import kong.unirest.JsonNode;
+import kong.unirest.Unirest;
+import org.json.*;
 
 import java.io.IOException;
-import java.math.BigDecimal;
+import java.nio.file.*;
 
 
 public class StockData {
+
+  private static final String BASE_URL = "https://www.alphavantage.co/query";
+
   public static void main(String[] args) throws IOException {
 
-    Stock stock = YahooFinance.get("AAPL");
+    String avKey = Files.readString(Paths.get("av_key")).trim();
+    System.out.println(avKey);
 
-    BigDecimal price = stock.getQuote().getPrice();
-    BigDecimal change = stock.getQuote().getChangeInPercent();
-    BigDecimal peg = stock.getStats().getPeg();
-    BigDecimal dividend = stock.getDividend().getAnnualYieldPercent();
-
-    System.out.println("Symbol: " + stock.getSymbol());
-    System.out.println("Price: " + price);
-    System.out.println("Change: " + change);
-    System.out.println("PEG: " + peg);
-    System.out.println("Dividend: " + dividend);
-
+    String symbol = "AAPL";
+    HttpResponse<JsonNode> response = Unirest.get(BASE_URL)
+            .queryString("function", "TIME_SERIES_DAILY")
+            .queryString("symbol", symbol)
+            .queryString("apikey", avKey)
+            .asJson();
 
   }
 }
