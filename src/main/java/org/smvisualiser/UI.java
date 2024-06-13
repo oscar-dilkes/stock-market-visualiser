@@ -39,14 +39,22 @@ public class UI {
         try {
           Stock thisStock = StockData.retrieveData(symbol);
           JSONObject stockData = thisStock.getData();
+          System.out.println(stockData.toString(4));
           JSONObject timeSeries = stockData.getJSONObject("Time Series (Daily)");
           Set<String> dates = timeSeries.keySet();
           DefaultListModel listModel = new DefaultListModel();
           for (String date : dates) {
             listModel.addElement(date + ": High = " + timeSeries.getJSONObject(date).get("2. high"));
           }
-          JList list = new JList(listModel);
-          panel.add(list, BorderLayout.SOUTH);
+          JList<String> list = new JList(listModel);
+
+          panel.remove(1);
+
+          instructionLabel.setText(symbol);
+
+          panel.add(new JScrollPane(list), BorderLayout.CENTER);
+          panel.revalidate();
+          panel.repaint();
         } catch (IOException ex) {
           throw new RuntimeException(ex);
         }
