@@ -4,13 +4,13 @@ import kong.unirest.HttpResponse;
 import kong.unirest.JsonNode;
 import kong.unirest.Unirest;
 import kong.unirest.json.JSONObject;
-//import org.json.JSONObject;
-//import org.json.*;
+import org.apache.http.util.Asserts;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.*;
+import java.util.Set;
 
 
 public class StockData {
@@ -34,7 +34,12 @@ public class StockData {
             .asJson();
     if (response.isSuccess()) {
       JSONObject stockData = response.getBody().getObject();
-      System.out.println(stockData.toString(4));
+//      System.out.println(stockData.toString(4));
+      JSONObject timeSeries = stockData.getJSONObject("Time Series (Daily)");
+      Set<String> dates = timeSeries.keySet();
+      for (String date : dates) {
+        System.out.println(date + ": High = " + timeSeries.getJSONObject(date).get("2. high"));
+      }
     }
     else {
       System.out.println("Error: " + response.getStatusText());
