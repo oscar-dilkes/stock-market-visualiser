@@ -1,8 +1,12 @@
 package org.smvisualiser;
 
+import kong.unirest.json.JSONObject;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.io.IOException;
+import java.util.Set;
 
 public class UI {
   public static void display() {
@@ -32,7 +36,20 @@ public class UI {
     submitButton.addActionListener(e -> {
       String symbol = symbolField.getText().trim();
       if (!symbol.isEmpty()) {
-        JOptionPane.showMessageDialog(frame, "Fetching data for symbol: " + symbol);
+        try {
+          Stock thisStock = StockData.retrieveData(symbol);
+          JSONObject stockData = thisStock.getData();
+          JSONObject timeSeries = stockData.getJSONObject("Time Series (Daily)");
+          Set<String> dates = timeSeries.keySet();
+          DefaultListModel listModel = new DefaultListModel();
+          for (String date : dates) {
+            listModel.addElement(date + ": High = " + timeSeries.getJSONObject(date).get("2. high"));
+          }
+          JList list = new JList(listModel);
+          panel.add(list, BorderLayout.SOUTH);
+        } catch (IOException ex) {
+          throw new RuntimeException(ex);
+        }
       }
       else {
         JOptionPane.showMessageDialog(frame, "Please enter a symbol.");
