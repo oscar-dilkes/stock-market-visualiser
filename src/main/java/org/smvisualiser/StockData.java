@@ -17,15 +17,11 @@ public class StockData {
 
   private static final String BASE_URL = "https://www.alphavantage.co/query";
 
-  public static void main(String[] args) throws IOException {
+  public static Stock retrieveData(String symbol) throws IOException {
 
     String avKey = Files.readString(Paths.get("av_key")).trim();
 
-    BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
-
-    System.out.println("Please enter the desired stock symbol: ");
-
-    String symbol = consoleReader.readLine();
+    Stock stock = new Stock(symbol);
 
     HttpResponse<JsonNode> response = Unirest.get(BASE_URL)
             .queryString("function", "TIME_SERIES_DAILY")
@@ -34,15 +30,16 @@ public class StockData {
             .asJson();
     if (response.isSuccess()) {
       JSONObject stockData = response.getBody().getObject();
-//      System.out.println(stockData.toString(4));
-      JSONObject timeSeries = stockData.getJSONObject("Time Series (Daily)");
-      Set<String> dates = timeSeries.keySet();
-      for (String date : dates) {
-        System.out.println(date + ": High = " + timeSeries.getJSONObject(date).get("2. high"));
-      }
+      stock.setData(stockData);
+//      JSONObject timeSeries = stockData.getJSONObject("Time Series (Daily)");
+//      Set<String> dates = timeSeries.keySet();
+//      for (String date : dates) {
+//        System.out.println(date + ": High = " + timeSeries.getJSONObject(date).get("2. high"));
+//      }
     }
     else {
-      System.out.println("Error: " + response.getStatusText());
+      stock.setData(null);
     }
+    return stock;
   }
 }
