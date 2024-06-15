@@ -1,6 +1,11 @@
 package org.smvisualiser;
 
 import org.jfree.chart.*;
+import org.jfree.chart.axis.CategoryAxis;
+import org.jfree.chart.axis.ValueAxis;
+import org.jfree.chart.plot.CategoryPlot;
+import org.jfree.chart.plot.Plot;
+import org.jfree.chart.plot.XYPlot;
 import org.jfree.data.category.DefaultCategoryDataset;
 
 import javax.swing.*;
@@ -58,6 +63,11 @@ public class UI {
           Stock thisStock = client.retrieveData(ticker, 1, "day", from, to);
 
           JFreeChart chart = createLineChart(thisStock, from, to);
+
+          CategoryPlot plot = (CategoryPlot) chart.getPlot();
+          CategoryAxis xAxis = plot.getDomainAxis();
+          xAxis.setTickLabelsVisible(false);  // Hide x-axis labels
+
           ChartPanel chartPanelComponent = new ChartPanel(chart);
 
           chartPanelComponent.setPreferredSize(new Dimension(800, 600));
