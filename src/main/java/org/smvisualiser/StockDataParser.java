@@ -4,12 +4,12 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 public class StockDataParser {
-  public static Set<StockDataPoint> parseHistoricalDataPoints(JsonObject historicalData) {
-    Set<StockDataPoint> historicalDataPoints = new HashSet<>();
+  public static List<StockDataPoint> parseHistoricalDataPoints(JsonObject historicalData) {
+    List<StockDataPoint> historicalDataPoints = new ArrayList<>();
 
     if (historicalData.has("results")) {
       JsonArray results = historicalData.getAsJsonArray("results");

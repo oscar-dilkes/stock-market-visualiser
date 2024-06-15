@@ -2,11 +2,12 @@ package org.smvisualiser;
 
 import com.google.gson.JsonObject;
 
+import java.util.List;
 import java.util.Set;
 
 public class Stock {
   private final String ticker;
-  private final Set<StockDataPoint> stockDataPoints;
+  private final List<StockDataPoint> stockDataPoints;
   private final boolean retrievalSuccess;
 
   public Stock(String ticker, JsonObject data, boolean retrievalSuccess) {
@@ -19,7 +20,7 @@ public class Stock {
     return this.ticker;
   }
 
-  public Set<StockDataPoint> getStockDataPoints() {
+  public List<StockDataPoint> getStockDataPoints() {
     return this.stockDataPoints;
   }
 
