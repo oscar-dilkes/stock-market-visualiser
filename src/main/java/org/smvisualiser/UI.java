@@ -1,18 +1,19 @@
 package org.smvisualiser;
 
-import org.jfree.chart.*;
-import org.jfree.chart.axis.CategoryAxis;
+import org.jdatepicker.impl.DateComponentFormatter;
+import org.jdatepicker.impl.JDatePanelImpl;
+import org.jdatepicker.impl.JDatePickerImpl;
+import org.jdatepicker.impl.UtilDateModel;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartPanel;
+import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.ValueAxis;
-import org.jfree.chart.plot.CategoryPlot;
-import org.jfree.chart.plot.Plot;
 import org.jfree.chart.plot.XYPlot;
-import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.data.xy.DefaultHighLowDataset;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-
 import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -20,6 +21,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
+import java.util.Properties;
 
 public class UI {
   public static void display() {
@@ -37,24 +39,51 @@ public class UI {
     JFrame frame = new JFrame("HW");
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-    JPanel mainPanel = new JPanel();
-    mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+    JPanel mainPanel = new JPanel(new BorderLayout());
     mainPanel.setBorder(new EmptyBorder(10,10,10,10));
 
-    JPanel inputPanel = new JPanel(new FlowLayout());
+    // Input Panel
+    JPanel inputPanel = new JPanel();
+    inputPanel.setLayout(new BoxLayout(inputPanel, BoxLayout.Y_AXIS));
     JLabel instructionLabel = new JLabel("Enter Symbol:");
-    JTextField tickerField = new JTextField(10);
+    JTextField tickerField = new JTextField(4);
+    tickerField.setPreferredSize(new Dimension(tickerField.getPreferredSize().width, 1));
     JButton submitButton = new JButton("Submit");
+
+    // Start Date Picker Panel
+    JPanel startDatePanel = new JPanel(new BorderLayout());
+    JLabel startDateLabel = new JLabel("Start Date");
+    UtilDateModel modelStart = new UtilDateModel();
+    Properties properties = new Properties();
+    properties.put("text.today", "Today");
+    properties.put("text.month", "Month");
+    properties.put("text.year", "Year");
+    JDatePanelImpl datePanelStart = new JDatePanelImpl(modelStart, properties);
+    JDatePickerImpl datePickerStart = new JDatePickerImpl(datePanelStart, new DateComponentFormatter());
+    startDatePanel.add(startDateLabel, BorderLayout.NORTH);
+    startDatePanel.add(datePickerStart, BorderLayout.CENTER);
+
+    // End Date Picker Panel
+    JPanel endDatePanel = new JPanel(new BorderLayout());
+    JLabel endDateLabel = new JLabel("End Date");
+    UtilDateModel modelEnd = new UtilDateModel();
+    JDatePanelImpl datePanelEnd = new JDatePanelImpl(modelEnd, properties);
+    JDatePickerImpl datePickerEnd = new JDatePickerImpl(datePanelEnd, new DateComponentFormatter());
+    endDatePanel.add(endDateLabel, BorderLayout.NORTH);
+    endDatePanel.add(datePickerEnd, BorderLayout.CENTER);
 
     inputPanel.add(instructionLabel);
     inputPanel.add(tickerField);
+    inputPanel.add(startDatePanel);
+    inputPanel.add(endDatePanel);
     inputPanel.add(submitButton);
 
-    mainPanel.add(inputPanel);
+    mainPanel.add(inputPanel, BorderLayout.WEST);
 
+    // Chart Panel
     JPanel chartPanel = new JPanel(new BorderLayout());
     chartPanel.setPreferredSize(new Dimension(800, 600)); // Set preferred size
-    mainPanel.add(chartPanel);
+    mainPanel.add(chartPanel, BorderLayout.CENTER);
 
     submitButton.addActionListener(e -> {
       String ticker = tickerField.getText().trim();
@@ -72,7 +101,6 @@ public class UI {
           xAxis.setTickLabelsVisible(false);  // Hide x-axis labels
 
           ChartPanel chartPanelComponent = new ChartPanel(chart);
-
           chartPanelComponent.setPreferredSize(new Dimension(800, 600));
 
           chartPanel.removeAll();
@@ -85,10 +113,8 @@ public class UI {
         } catch (IOException ex) {
           throw new RuntimeException(ex);
         }
-      }
-      else {
+      } else {
         JOptionPane.showMessageDialog(frame, "Please enter a symbol.");
-
       }
     });
 
@@ -96,6 +122,7 @@ public class UI {
     frame.pack();
     frame.setVisible(true);
   }
+
 
   public static JFreeChart createLineChart(Stock thisStock, String from, String to) {
     List dataPoints = thisStock.getStockDataPoints();

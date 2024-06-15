@@ -33,6 +33,12 @@
             <artifactId>jfreechart</artifactId>
             <version>1.5.4</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/org.jdatepicker/jdatepicker -->
+        <dependency>
+            <groupId>org.jdatepicker</groupId>
+            <artifactId>jdatepicker</artifactId>
+            <version>1.3.4</version>
+        </dependency>
     </dependencies>
 
 </project>
