@@ -1,8 +1,12 @@
 package org.smvisualiser;
 
+import org.jfree.chart.*;
+import org.jfree.data.category.DefaultCategoryDataset;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+
 import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -25,44 +29,46 @@ public class UI {
     JFrame frame = new JFrame("HW");
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-    JPanel panel = new JPanel(new BorderLayout());
-    panel.setBorder(new EmptyBorder(10,10,10,10));
-
-    JLabel instructionLabel = new JLabel("Enter Symbol:");
-    panel.add(instructionLabel, BorderLayout.NORTH);
+    JPanel mainPanel = new JPanel();
+    mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+    mainPanel.setBorder(new EmptyBorder(10,10,10,10));
 
     JPanel inputPanel = new JPanel(new FlowLayout());
-
+    JLabel instructionLabel = new JLabel("Enter Symbol:");
     JTextField tickerField = new JTextField(10);
-    inputPanel.add(tickerField);
-
     JButton submitButton = new JButton("Submit");
+
+    inputPanel.add(instructionLabel);
+    inputPanel.add(tickerField);
     inputPanel.add(submitButton);
 
-    panel.add(inputPanel, BorderLayout.CENTER);
+    mainPanel.add(inputPanel);
+
+    JPanel chartPanel = new JPanel(new BorderLayout());
+
+    mainPanel.add(chartPanel);
 
     submitButton.addActionListener(e -> {
       String ticker = tickerField.getText().trim();
       if (!ticker.isEmpty()) {
         try {
+          String from = "2024-04-14";
+          String to = "2024-06-14";
           PolygonClient client = new PolygonClient();
-          Stock thisStock = client.retrieveData(ticker, 1, "day", "2024-04-14", "2024-06-14");
+          Stock thisStock = client.retrieveData(ticker, 1, "day", from, to);
 
-          System.out.println(thisStock.getStockDataPoints());
+          JFreeChart chart = createLineChart(thisStock, from, to);
+          ChartPanel chartPanelComponent = new ChartPanel(chart);
 
-          DefaultListModel listModel = new DefaultListModel();
-          for (StockDataPoint stockDataPoint : thisStock.getStockDataPoints()) {
-            listModel.addElement(unixTimestampConverter(stockDataPoint.getTimestamp()) + ": High = " + stockDataPoint.getHighPrice());
-          }
-          JList<String> list = new JList(listModel);
+          chartPanelComponent.setPreferredSize(new Dimension(800, 600));
 
-          panel.remove(1);
+          chartPanel.removeAll();
+          chartPanel.add(chartPanelComponent, BorderLayout.CENTER);
+          chartPanel.revalidate();
+          chartPanel.repaint();
 
-          instructionLabel.setText(ticker);
+          frame.pack();
 
-          panel.add(new JScrollPane(list), BorderLayout.CENTER);
-          panel.revalidate();
-          panel.repaint();
         } catch (IOException ex) {
           throw new RuntimeException(ex);
         }
@@ -73,8 +79,22 @@ public class UI {
       }
     });
 
-    frame.getContentPane().add(panel);
+    frame.getContentPane().add(mainPanel);
     frame.pack();
     frame.setVisible(true);
+  }
+
+  public static JFreeChart createLineChart(Stock thisStock, String from, String to) {
+    DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+
+    for (StockDataPoint stockDataPoint : thisStock.getStockDataPoints()) {
+      dataset.addValue(stockDataPoint.getClosePrice(), "Close Price", unixTimestampConverter(stockDataPoint.getTimestamp()));
+    }
+
+    return ChartFactory.createLineChart(
+            "Close Price from " + from + " to " + to,
+            "Date",
+            "Close Price",
+            dataset);
   }
 }
