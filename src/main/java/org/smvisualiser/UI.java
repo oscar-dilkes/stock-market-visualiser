@@ -1,11 +1,13 @@
 package org.smvisualiser;
 
-import kong.unirest.json.JSONObject;
+import yahoofinance.*;
+import yahoofinance.histquotes.HistoricalQuote;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.io.IOException;
+import java.util.List;
 import java.util.Set;
 
 public class UI {
@@ -38,13 +40,12 @@ public class UI {
       if (!symbol.isEmpty()) {
         try {
           Stock thisStock = StockData.retrieveData(symbol);
-          JSONObject stockData = thisStock.getData();
-          System.out.println(stockData.toString(4));
-          JSONObject timeSeries = stockData.getJSONObject("Time Series (Daily)");
-          Set<String> dates = timeSeries.keySet();
+          List<HistoricalQuote> history = thisStock.getHistory();
+
+
           DefaultListModel listModel = new DefaultListModel();
-          for (String date : dates) {
-            listModel.addElement(date + ": High = " + timeSeries.getJSONObject(date).get("2. high"));
+          for (HistoricalQuote quote : history) {
+            listModel.addElement(quote.getDate() + ": High = " + quote.getHigh());
           }
           JList<String> list = new JList(listModel);
 
