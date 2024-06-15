@@ -4,10 +4,21 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.io.IOException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 public class UI {
   public static void display() {
     SwingUtilities.invokeLater(UI::createAndShowGUI);
+  }
+
+  public static String unixTimestampConverter(long unixTimestamp) {
+    Instant instant = Instant.ofEpochMilli(unixTimestamp);
+    LocalDateTime dateTime = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    return dateTime.format(formatter);
   }
 
   public static void createAndShowGUI() {
@@ -41,7 +52,7 @@ public class UI {
 
           DefaultListModel listModel = new DefaultListModel();
           for (StockDataPoint stockDataPoint : thisStock.getStockDataPoints()) {
-            listModel.addElement(stockDataPoint.getTimestamp() + ": High = " + stockDataPoint.getHighPrice());
+            listModel.addElement(unixTimestampConverter(stockDataPoint.getTimestamp()) + ": High = " + stockDataPoint.getHighPrice());
           }
           JList<String> list = new JList(listModel);
 
