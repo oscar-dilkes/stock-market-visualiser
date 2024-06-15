@@ -1,14 +1,10 @@
 package org.smvisualiser;
 
-import yahoofinance.*;
-import yahoofinance.histquotes.HistoricalQuote;
-
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.io.IOException;
 import java.util.List;
-import java.util.Set;
 
 public class UI {
   public static void display() {
@@ -27,8 +23,8 @@ public class UI {
 
     JPanel inputPanel = new JPanel(new FlowLayout());
 
-    JTextField symbolField = new JTextField(10);
-    inputPanel.add(symbolField);
+    JTextField tickerField = new JTextField(10);
+    inputPanel.add(tickerField);
 
     JButton submitButton = new JButton("Submit");
     inputPanel.add(submitButton);
@@ -36,22 +32,23 @@ public class UI {
     panel.add(inputPanel, BorderLayout.CENTER);
 
     submitButton.addActionListener(e -> {
-      String symbol = symbolField.getText().trim();
-      if (!symbol.isEmpty()) {
+      String ticker = tickerField.getText().trim();
+      if (!ticker.isEmpty()) {
         try {
-          Stock thisStock = StockData.retrieveData(symbol);
-          List<HistoricalQuote> history = thisStock.getHistory();
+          PolygonClient client = new PolygonClient();
+          Stock thisStock = client.retrieveData(ticker, 1, "day", "2024-04-14", "2024-06-14");
 
+          System.out.println(thisStock.getData());
 
           DefaultListModel listModel = new DefaultListModel();
-          for (HistoricalQuote quote : history) {
-            listModel.addElement(quote.getDate() + ": High = " + quote.getHigh());
-          }
+//          for (HistoricalQuote quote : history) {
+//            listModel.addElement(quote.getDate() + ": High = " + quote.getHigh());
+//          }
           JList<String> list = new JList(listModel);
 
           panel.remove(1);
 
-          instructionLabel.setText(symbol);
+          instructionLabel.setText(ticker);
 
           panel.add(new JScrollPane(list), BorderLayout.CENTER);
           panel.revalidate();
