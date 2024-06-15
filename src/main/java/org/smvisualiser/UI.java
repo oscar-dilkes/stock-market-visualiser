@@ -4,7 +4,6 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.io.IOException;
-import java.util.List;
 
 public class UI {
   public static void display() {
@@ -38,12 +37,12 @@ public class UI {
           PolygonClient client = new PolygonClient();
           Stock thisStock = client.retrieveData(ticker, 1, "day", "2024-04-14", "2024-06-14");
 
-          System.out.println(thisStock.getData());
+          System.out.println(thisStock.getStockDataPoints());
 
           DefaultListModel listModel = new DefaultListModel();
-//          for (HistoricalQuote quote : history) {
-//            listModel.addElement(quote.getDate() + ": High = " + quote.getHigh());
-//          }
+          for (StockDataPoint stockDataPoint : thisStock.getStockDataPoints()) {
+            listModel.addElement(stockDataPoint.getTimestamp() + ": High = " + stockDataPoint.getHighPrice());
+          }
           JList<String> list = new JList(listModel);
 
           panel.remove(1);
