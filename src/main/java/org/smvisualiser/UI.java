@@ -7,6 +7,7 @@ import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.Plot;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.data.category.DefaultCategoryDataset;
+import org.jfree.data.xy.DefaultHighLowDataset;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -17,6 +18,8 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
+import java.util.List;
 
 public class UI {
   public static void display() {
@@ -50,7 +53,7 @@ public class UI {
     mainPanel.add(inputPanel);
 
     JPanel chartPanel = new JPanel(new BorderLayout());
-
+    chartPanel.setPreferredSize(new Dimension(800, 600)); // Set preferred size
     mainPanel.add(chartPanel);
 
     submitButton.addActionListener(e -> {
@@ -64,8 +67,8 @@ public class UI {
 
           JFreeChart chart = createLineChart(thisStock, from, to);
 
-          CategoryPlot plot = (CategoryPlot) chart.getPlot();
-          CategoryAxis xAxis = plot.getDomainAxis();
+          XYPlot plot = (XYPlot) chart.getPlot();
+          ValueAxis xAxis = plot.getDomainAxis();
           xAxis.setTickLabelsVisible(false);  // Hide x-axis labels
 
           ChartPanel chartPanelComponent = new ChartPanel(chart);
@@ -95,16 +98,32 @@ public class UI {
   }
 
   public static JFreeChart createLineChart(Stock thisStock, String from, String to) {
-    DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+    List dataPoints = thisStock.getStockDataPoints();
 
-    for (StockDataPoint stockDataPoint : thisStock.getStockDataPoints()) {
-      dataset.addValue(stockDataPoint.getClosePrice(), "Close Price", unixTimestampConverter(stockDataPoint.getTimestamp()));
+    Date[] date = new Date[dataPoints.size()];
+    double[] high = new double[dataPoints.size()];
+    double[] low = new double[dataPoints.size()];
+    double[] open = new double[dataPoints.size()];
+    double[] close = new double[dataPoints.size()];
+    double[] volume = new double[dataPoints.size()];
+
+    for (int i = 0; i < dataPoints.size(); i++) {
+      StockDataPoint dataPoint = (StockDataPoint) dataPoints.get(i);
+      date[i] = new Date(dataPoint.getTimestamp());
+      high[i] = dataPoint.getHighPrice();
+      low[i] = dataPoint.getLowPrice();
+      open[i] = dataPoint.getOpenPrice();
+      close[i] = dataPoint.getClosePrice();
+      volume[i] = dataPoint.getVolume();
     }
 
-    return ChartFactory.createLineChart(
-            "Close Price from " + from + " to " + to,
+    DefaultHighLowDataset dataset = new DefaultHighLowDataset(thisStock.getTicker(), date, high, low, open, close, volume);
+    return ChartFactory.createCandlestickChart(
+            "",
             "Date",
-            "Close Price",
-            dataset);
+            "Price",
+            dataset,
+            false
+    );
   }
 }
