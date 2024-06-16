@@ -9,7 +9,6 @@ import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.NumberAxis;
-import org.jfree.chart.axis.NumberTickUnit;
 import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYBarRenderer;
@@ -229,22 +228,20 @@ public class UI {
     );
 
     XYPlot plot = (XYPlot) chart.getPlot();
-    ValueAxis xaxis = plot.getDomainAxis();
-    xaxis.setTickLabelsVisible(false);
+    NumberAxis volumeAxis = new NumberAxis("Volume");
+    volumeAxis.setNumberFormatOverride(new MillionsNumberFormat());  // Custom format for displaying in millions
+    plot.setRangeAxis(1, volumeAxis);
 
+    // Secondary dataset for volume
     XYSeries volumeSeries = new XYSeries("Volume");
     for (int i = 0; i < dataPoints.size(); i++) {
       volumeSeries.add(date[i].getTime(), volume[i]);
     }
     XYSeriesCollection volumeDataset = new XYSeriesCollection(volumeSeries);
-
-    NumberAxis volumeAxis = new NumberAxis("Volume (Millions)");
-    volumeAxis.setNumberFormatOverride(new MillionsNumberFormat());  // Custom format for displaying in millions
-    volumeAxis.setTickUnit(new NumberTickUnit(1));  // Set tick unit to 1 million
-    plot.setRangeAxis(1, volumeAxis);
     plot.setDataset(1, volumeDataset);
     plot.mapDatasetToRangeAxis(1, 1);
 
+    // Set renderer for the volume dataset
     XYBarRenderer volumeRenderer = new XYBarRenderer();
     plot.setRenderer(1, volumeRenderer);
 
