@@ -1,9 +1,11 @@
 package org.smvisualiser;
 
+import com.formdev.flatlaf.FlatLightLaf;
 import org.jdatepicker.impl.DateComponentFormatter;
 import org.jdatepicker.impl.JDatePanelImpl;
 import org.jdatepicker.impl.JDatePickerImpl;
 import org.jdatepicker.impl.UtilDateModel;
+import org.jetbrains.annotations.NotNull;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -15,6 +17,7 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -36,6 +39,7 @@ public class UI {
   }
 
   public static void createAndShowGUI() {
+//    FlatLightLaf.setup();
     JFrame frame = new JFrame("HW");
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
@@ -45,13 +49,18 @@ public class UI {
     // Input Panel
     JPanel inputPanel = new JPanel();
     inputPanel.setLayout(new BoxLayout(inputPanel, BoxLayout.Y_AXIS));
-    JLabel instructionLabel = new JLabel("Enter Symbol:");
-    JTextField tickerField = new JTextField(4);
-    tickerField.setPreferredSize(new Dimension(tickerField.getPreferredSize().width, 1));
+    inputPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+    JLabel instructionLabel = new JLabel("Symbol:");
+    instructionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+    JTextField tickerField = new JTextField();
+    tickerField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+
     JButton submitButton = new JButton("Submit");
 
     // Start Date Picker Panel
-    JPanel startDatePanel = new JPanel(new BorderLayout());
+    JPanel startDatePanel = new JPanel();
     JLabel startDateLabel = new JLabel("Start Date");
     UtilDateModel modelStart = new UtilDateModel();
     Properties properties = new Properties();
@@ -64,7 +73,7 @@ public class UI {
     startDatePanel.add(datePickerStart, BorderLayout.CENTER);
 
     // End Date Picker Panel
-    JPanel endDatePanel = new JPanel(new BorderLayout());
+    JPanel endDatePanel = new JPanel();
     JLabel endDateLabel = new JLabel("End Date");
     UtilDateModel modelEnd = new UtilDateModel();
     JDatePanelImpl datePanelEnd = new JDatePanelImpl(modelEnd, properties);
@@ -87,12 +96,29 @@ public class UI {
 
     submitButton.addActionListener(e -> {
       String ticker = tickerField.getText().trim();
+
+      Date startDate = (Date) datePickerStart.getModel().getValue();
+      Date endDate = (Date) datePickerEnd.getModel().getValue();
+
+      if (startDate == null || endDate == null) {
+        JOptionPane.showMessageDialog(frame, "Please select both start and end dates.");
+        return;  // Exit the ActionListener if dates are not selected
+      }
+
+      SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+
+      String from = sdf.format(startDate);
+      String to = sdf.format(endDate);
+
       if (!ticker.isEmpty()) {
         try {
-          String from = "2024-04-14";
-          String to = "2024-06-14";
           PolygonClient client = new PolygonClient();
           Stock thisStock = client.retrieveData(ticker, 1, "day", from, to);
+
+          if (!thisStock.isRetrievalSuccess()) {
+            JOptionPane.showMessageDialog(frame, "Data retrieval error: Ensure ticker symbol exists and date range is valid.");
+            return;
+          }
 
           JFreeChart chart = createLineChart(thisStock, from, to);
 
@@ -100,8 +126,7 @@ public class UI {
           ValueAxis xAxis = plot.getDomainAxis();
           xAxis.setTickLabelsVisible(false);  // Hide x-axis labels
 
-          ChartPanel chartPanelComponent = new ChartPanel(chart);
-          chartPanelComponent.setPreferredSize(new Dimension(800, 600));
+          ChartPanel chartPanelComponent = getChartPanel(chart);
 
           chartPanel.removeAll();
           chartPanel.add(chartPanelComponent, BorderLayout.CENTER);
@@ -121,6 +146,22 @@ public class UI {
     frame.getContentPane().add(mainPanel);
     frame.pack();
     frame.setVisible(true);
+  }
+
+  @NotNull
+  private static ChartPanel getChartPanel(JFreeChart chart) {
+    ChartPanel chartPanelComponent = new ChartPanel(chart);
+    chartPanelComponent.setPreferredSize(new Dimension(800, 600));
+    chartPanelComponent.setMouseZoomable(false);
+    chartPanelComponent.setMouseWheelEnabled(true);
+    chartPanelComponent.setDomainZoomable(true);
+    chartPanelComponent.setRangeZoomable(false);
+    chartPanelComponent.setPreferredSize(new Dimension(1680, 1100));
+    chartPanelComponent.setZoomTriggerDistance(Integer.MAX_VALUE);
+    chartPanelComponent.setFillZoomRectangle(false);
+    chartPanelComponent.setZoomOutlinePaint(new Color(0f, 0f, 0f, 0f));
+    chartPanelComponent.setZoomAroundAnchor(true);
+    return chartPanelComponent;
   }
 
 

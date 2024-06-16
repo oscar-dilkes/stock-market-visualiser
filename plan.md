@@ -17,3 +17,5 @@ Change over to yahoofinance API, but yahoo have stopped API use for stock data. 
 Now change over to polygon.io API, 5 request per minute on free tier should be sufficient for personal use.
 Next step: revert version to Alpha Vantage version as need to use custom stock object again and http requests.
 Must remember to include some sort of wait and retry after ~ 1 minute if requests exceeded.
+Include request counter
+Include info 

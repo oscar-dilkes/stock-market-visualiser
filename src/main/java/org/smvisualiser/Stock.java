@@ -12,8 +12,13 @@ public class Stock {
 
   public Stock(String ticker, JsonObject data, boolean retrievalSuccess) {
     this.ticker = ticker;
-    this.stockDataPoints = StockDataParser.parseHistoricalDataPoints(data);
     this.retrievalSuccess = retrievalSuccess;
+    if (retrievalSuccess) {
+      this.stockDataPoints = StockDataParser.parseHistoricalDataPoints(data);
+    }
+    else {
+      this.stockDataPoints = null;
+    }
   }
 
   public String getTicker() {
