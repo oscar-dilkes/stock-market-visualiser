@@ -1,6 +1,5 @@
 package org.smvisualiser;
 
-import com.formdev.flatlaf.FlatLightLaf;
 import org.jdatepicker.impl.DateComponentFormatter;
 import org.jdatepicker.impl.JDatePanelImpl;
 import org.jdatepicker.impl.JDatePickerImpl;
@@ -16,6 +15,7 @@ import org.jfree.data.xy.DefaultHighLowDataset;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
@@ -25,8 +25,17 @@ import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
+import java.util.LinkedList;
+import javax.swing.Timer;
+import java.awt.event.ActionListener;
+
 
 public class UI {
+
+  private static JLabel countLabel;
+  private static LinkedList<Long> pressTimestamps = new LinkedList<>();
+
+
   public static void display() {
     SwingUtilities.invokeLater(UI::createAndShowGUI);
   }
@@ -59,6 +68,9 @@ public class UI {
 
     JButton submitButton = new JButton("Submit");
 
+    countLabel = new JLabel("Presses in last minute: 0");
+    countLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
     // Start Date Picker Panel
     JPanel startDatePanel = new JPanel();
     JLabel startDateLabel = new JLabel("Start Date");
@@ -86,6 +98,7 @@ public class UI {
     inputPanel.add(startDatePanel);
     inputPanel.add(endDatePanel);
     inputPanel.add(submitButton);
+    inputPanel.add(countLabel);
 
     mainPanel.add(inputPanel, BorderLayout.WEST);
 
@@ -95,6 +108,14 @@ public class UI {
     mainPanel.add(chartPanel, BorderLayout.CENTER);
 
     submitButton.addActionListener(e -> {
+      if (pressTimestamps.size() >= 5) {
+        JOptionPane.showMessageDialog(frame, "Request limit exceeded: Try again once counter goes below 5.");
+        return;
+      }
+      long currentTime = System.currentTimeMillis();
+      pressTimestamps.add(currentTime);
+      updateCountLabel();
+
       String ticker = tickerField.getText().trim();
 
       Date startDate = (Date) datePickerStart.getModel().getValue();
@@ -146,6 +167,14 @@ public class UI {
     frame.getContentPane().add(mainPanel);
     frame.pack();
     frame.setVisible(true);
+
+    Timer timer = new Timer(1000, new ActionListener() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        updateCountLabel();
+      }
+    });
+    timer.start();
   }
 
   @NotNull
@@ -166,7 +195,7 @@ public class UI {
 
 
   public static JFreeChart createLineChart(Stock thisStock, String from, String to) {
-    List dataPoints = thisStock.getStockDataPoints();
+    List<StockDataPoint> dataPoints = thisStock.getStockDataPoints();
 
     Date[] date = new Date[dataPoints.size()];
     double[] high = new double[dataPoints.size()];
@@ -176,7 +205,7 @@ public class UI {
     double[] volume = new double[dataPoints.size()];
 
     for (int i = 0; i < dataPoints.size(); i++) {
-      StockDataPoint dataPoint = (StockDataPoint) dataPoints.get(i);
+      StockDataPoint dataPoint = dataPoints.get(i);
       date[i] = new Date(dataPoint.getTimestamp());
       high[i] = dataPoint.getHighPrice();
       low[i] = dataPoint.getLowPrice();
@@ -186,12 +215,32 @@ public class UI {
     }
 
     DefaultHighLowDataset dataset = new DefaultHighLowDataset(thisStock.getTicker(), date, high, low, open, close, volume);
-    return ChartFactory.createCandlestickChart(
+    JFreeChart chart = ChartFactory.createCandlestickChart(
             "",
             "Date",
             "Price",
             dataset,
             false
     );
+
+    XYPlot
+  }
+
+  private static void updateCountLabel() {
+    long currentTime = System.currentTimeMillis();
+    long oneMinuteAgo = currentTime - 60000;
+
+    while (!pressTimestamps.isEmpty() && pressTimestamps.getFirst() < oneMinuteAgo) {
+      pressTimestamps.removeFirst();
+    }
+
+    int count = pressTimestamps.size();
+
+    countLabel.setText("Presses in last minute: " + count);
+    if (count >= 5) {
+      countLabel.setForeground(Color.RED);
+    } else {
+      countLabel.setForeground(Color.BLACK);
+    }
   }
 }
