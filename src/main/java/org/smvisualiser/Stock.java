@@ -7,23 +7,15 @@ import java.util.List;
 public class Stock {
   private final String ticker;
   private final String name;
-  private final String market;
-  private final String locale;
-  private final String primaryExchange;
-  private final String type;
-  private final String currency;
+  private final String sector;
 
   private List<StockDataPoint> stockDataPoints;
   private boolean retrievalSuccess;
 
-  public Stock(String ticker, String name, String market, String locale, String primaryExchange, String type, String currency) {
+  public Stock(String ticker, String name, String sector) {
     this.ticker = ticker;
     this.name = name;
-    this.market = market;
-    this.locale = locale;
-    this.primaryExchange = primaryExchange;
-    this.type = type;
-    this.currency = currency;
+    this.sector = sector;
   }
 
   public void setStockDataPoints (JsonObject data, boolean retrievalSuccess) {
@@ -41,27 +33,11 @@ public class Stock {
   }
 
   public String getName() {
-    return name;
+    return this.name;
   }
 
-  public String getMarket() {
-    return market;
-  }
-
-  public String getLocale() {
-    return locale;
-  }
-
-  public String getPrimaryExchange() {
-    return primaryExchange;
-  }
-
-  public String getType() {
-    return type;
-  }
-
-  public String getCurrency() {
-    return currency;
+  public String getSector() {
+    return this.sector;
   }
 
   public List<StockDataPoint> getStockDataPoints() {

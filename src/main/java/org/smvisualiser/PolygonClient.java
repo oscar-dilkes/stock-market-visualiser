@@ -36,26 +36,6 @@ public class PolygonClient {
     return Files.readString(Paths.get("polygon_key")).trim();
   }
 
-  public List<Stock> fetchAndParseStocks() throws IOException {
-    String url = String.format("%s/v3/reference/tickers?active=true&limit=1000&apiKey=%s",
-            BASE_URL, API_KEY);
-
-    Request request = new Request.Builder()
-            .url(url)
-            .build();
-    try(Response response = httpClient.newCall(request).execute()) {
-      if (!response.isSuccessful()) {
-        return null;
-      }
-      else {
-        assert response.body() != null;
-        String responseBody = response.body().string();
-        JsonObject data = gson.fromJson(responseBody, JsonObject.class);
-        return StockDataParser.parseStocks(data);
-      }
-    }
-  }
-
   public void retrieveData(Stock stock, int multiplier, String timespan, String from, String to) throws IOException {
 
     String url = String.format("%s/v2/aggs/ticker/%s/range/%d/%s/%s/%s?apiKey=%s",

@@ -1,13 +1,11 @@
 package org.smvisualiser;
 
 import com.formdev.flatlaf.FlatIntelliJLaf;
-import com.formdev.flatlaf.FlatLightLaf;
 import org.jdatepicker.impl.DateComponentFormatter;
 import org.jdatepicker.impl.JDatePanelImpl;
 import org.jdatepicker.impl.JDatePickerImpl;
 import org.jdatepicker.impl.UtilDateModel;
 import org.jetbrains.annotations.NotNull;
-import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.DateAxis;
@@ -18,26 +16,19 @@ import org.jfree.chart.labels.StandardXYToolTipGenerator;
 import org.jfree.chart.plot.CombinedDomainXYPlot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
-import org.jfree.chart.renderer.category.BarRenderer;
 import org.jfree.chart.renderer.xy.CandlestickRenderer;
 import org.jfree.chart.renderer.xy.StandardXYBarPainter;
 import org.jfree.chart.renderer.xy.XYBarRenderer;
-import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.data.time.Day;
 import org.jfree.data.time.RegularTimePeriod;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
 import org.jfree.data.time.ohlc.OHLCSeries;
 import org.jfree.data.time.ohlc.OHLCSeriesCollection;
-import org.jfree.data.xy.DefaultHighLowDataset;
-import org.jfree.data.xy.XYSeries;
-import org.jfree.data.xy.XYSeriesCollection;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.geom.RectangularShape;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -50,8 +41,6 @@ import java.util.List;
 import java.util.Properties;
 import java.util.LinkedList;
 import javax.swing.Timer;
-import java.awt.event.ActionListener;
-
 
 
 public class UI {
@@ -73,8 +62,8 @@ public class UI {
   }
 
   public static void createAndShowGUI() {
-//    FlatLightLaf.setup();
     FlatIntelliJLaf.setup();
+
     JFrame frame = new JFrame("Stock Market Visualiser");
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
@@ -91,20 +80,36 @@ public class UI {
     gbc.fill = GridBagConstraints.HORIZONTAL; // Make components fill horizontally
     gbc.weightx = 1.0;
 
+    JLabel indexLabel = new JLabel("Index:");
 
-    JLabel instructionLabel = new JLabel("Symbol:");
+    JComboBox<Index> indexBox = new JComboBox<>();
+    indexBox.addItem(new Index("S&P 500", "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"));
+    indexBox.addItem(new Index("Nasdaq-100", "https://en.wikipedia.org/wiki/Nasdaq-100"));
+    indexBox.addItem(new Index("FTSE 100", "https://en.wikipedia.org/wiki/FTSE_100_Index"));
 
-    try {
-      client = new PolygonClient();
-      stockList = client.fetchAndParseStocks();
-    } catch (IOException ex) {
-      throw new RuntimeException();
-    }
+    JLabel symbolLabel = new JLabel("Ticker Symbol:");
 
     JComboBox<Stock> stockBox = new JComboBox<>();
+
+    Index index = (Index) indexBox.getSelectedItem();
+    stockList = UI.getStockList(index);
+    assert stockList != null;
     for (Stock stock : stockList) {
       stockBox.addItem(stock);
     }
+
+    indexBox.addActionListener(e -> {
+      stockBox.removeAllItems();
+      stockList = UI.getStockList((Index) indexBox.getSelectedItem());
+      if (stockList != null) {
+        for (Stock stock : stockList) {
+          stockBox.addItem(stock);
+        }
+      } else {
+        JOptionPane.showMessageDialog(frame, "Please select a panel.");
+      }
+
+    });
 
     JButton submitButton = new JButton("Submit");
 
@@ -132,7 +137,9 @@ public class UI {
     endDatePanel.add(endDateLabel);
     endDatePanel.add(datePickerEnd);
 
-    inputPanel.add(instructionLabel, gbc);
+    inputPanel.add(indexLabel, gbc);
+    inputPanel.add(indexBox, gbc);
+    inputPanel.add(symbolLabel, gbc);
     inputPanel.add(stockBox, gbc);
     inputPanel.add(startDatePanel, gbc);
     inputPanel.add(endDatePanel, gbc);
@@ -141,10 +148,10 @@ public class UI {
 
     mainPanel.add(inputPanel, BorderLayout.WEST);
 
+
     // Chart Panel
     JPanel chartPanel = new JPanel(new BorderLayout());
     chartPanel.setPreferredSize(new Dimension(800, 600)); // Set preferred size
-    chartPanel.setBackground(Color.WHITE);
 
     mainPanel.add(chartPanel, BorderLayout.CENTER);
 
@@ -173,12 +180,18 @@ public class UI {
       String to = sdf.format(endDate);
         try {
           client = new PolygonClient();
+          assert thisStock != null;
           client.retrieveData(thisStock, 1, "day", from, to);
 
           if (!thisStock.isRetrievalSuccess()) {
             JOptionPane.showMessageDialog(frame, "Data retrieval error: Ensure ticker symbol exists and date range is valid.");
             return;
           }
+
+          sdf = new SimpleDateFormat("dd-MM-yyyy");
+
+          from = sdf.format(startDate);
+          to = sdf.format(endDate);
 
           JFreeChart chart = createChart(thisStock, from, to);
 
@@ -253,24 +266,14 @@ public class UI {
     priceAxis.setAutoRangeIncludesZero(false);
 
     CandlestickRenderer candlestickRenderer = new CandlestickRenderer(CandlestickRenderer.WIDTHMETHOD_AVERAGE,
-            false, new HighLowItemLabelGenerator(new SimpleDateFormat("kk:mm"), new DecimalFormat("0.000")));
+            false, new HighLowItemLabelGenerator(new SimpleDateFormat("dd-MM-yyyy"), new DecimalFormat("0.000")));
 
-    candlestickRenderer.setUpPaint(new Color(0, 153, 51));
-    candlestickRenderer.setDownPaint(new Color(204, 0, 0));
+    candlestickRenderer.setUpPaint(new Color(80, 142, 84));
+    candlestickRenderer.setDownPaint(new Color(181, 71, 71));
     candlestickRenderer.setSeriesPaint(0, Color.BLACK);
 
     XYPlot candlestickSubplot = new XYPlot(candlestickDataset, null, priceAxis, candlestickRenderer);
     candlestickSubplot.setBackgroundPaint(Color.white);
-
-//    DefaultHighLowDataset dataset = new DefaultHighLowDataset(thisStock.getTicker(), date, high, low, open, close, volume);
-
-//    JFreeChart chart = ChartFactory.createCandlestickChart(
-//            "Prices and Volume for " + thisStock.getTicker() + " from " + from + " to " + to,
-//            "Date",
-//            "Price",
-//            dataset,
-//            false
-//    );
 
     /**
      * Create volume subplot
@@ -288,10 +291,10 @@ public class UI {
 
     XYBarRenderer timeRenderer = new XYBarRenderer(0.20);
     timeRenderer.setShadowVisible(false);
-    timeRenderer.setDefaultToolTipGenerator(new StandardXYToolTipGenerator("Volume--> Time={1} Size={2}",
-            new SimpleDateFormat("kk:mm"), new DecimalFormat("0")));
+    timeRenderer.setDefaultToolTipGenerator(new StandardXYToolTipGenerator("Volume--> Date={1} Size={2}",
+            new SimpleDateFormat("dd-MM-yyyy"), new DecimalFormat("0")));
 
-    timeRenderer.setSeriesPaint(0, new Color(116, 166, 213, 255));
+    timeRenderer.setSeriesPaint(0, new Color(63, 98, 170));
     timeRenderer.setDrawBarOutline(true);
     timeRenderer.setDefaultOutlinePaint(Color.BLACK);
 
@@ -313,7 +316,7 @@ public class UI {
     Font segoeUITitleFont = new Font("Segoe UI", Font.BOLD, 18);
 
     JFreeChart chart = new JFreeChart(
-            "Prices and Volume for " + thisStock.getName() + " from " + from + " to " + to,
+            thisStock.getName() + " from " + from + " to " + to,
             segoeUITitleFont,
             mainPlot,
             true
@@ -340,5 +343,14 @@ public class UI {
     } else {
       countLabel.setForeground(Color.BLACK);
     }
+  }
+  private static List<Stock> getStockList (Index index) {
+    if (index != null) {
+      IndexWikipediaScraper scraper = new IndexWikipediaScraper();
+      stockList = scraper.scraper(index.getWikipediaUrl());
+    } else {
+      return null;
+    }
+    return stockList;
   }
 }
