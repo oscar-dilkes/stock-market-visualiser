@@ -4,7 +4,7 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 
 class MillionsNumberFormat extends NumberFormat {
-  private DecimalFormat df = new DecimalFormat("#.## 'M'");
+  private final DecimalFormat df = new DecimalFormat("#.## 'M'");
 
   @Override
   public StringBuffer format(double number, StringBuffer toAppendTo, java.text.FieldPosition pos) {

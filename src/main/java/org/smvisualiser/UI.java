@@ -1,5 +1,6 @@
 package org.smvisualiser;
 
+import com.formdev.flatlaf.FlatLightLaf;
 import org.jdatepicker.impl.DateComponentFormatter;
 import org.jdatepicker.impl.JDatePanelImpl;
 import org.jdatepicker.impl.JDatePickerImpl;
@@ -11,6 +12,7 @@ import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.plot.XYPlot;
+import org.jfree.chart.renderer.xy.CandlestickRenderer;
 import org.jfree.chart.renderer.xy.XYBarRenderer;
 import org.jfree.data.xy.DefaultHighLowDataset;
 import org.jfree.data.xy.XYSeries;
@@ -34,10 +36,12 @@ import javax.swing.Timer;
 import java.awt.event.ActionListener;
 
 
+
 public class UI {
 
   private static JLabel countLabel;
   private static LinkedList<Long> pressTimestamps = new LinkedList<>();
+  private static final Font FONT = new JLabel().getFont();
 
 
   public static void display() {
@@ -52,28 +56,31 @@ public class UI {
   }
 
   public static void createAndShowGUI() {
-//    FlatLightLaf.setup();
-    JFrame frame = new JFrame("HW");
+    FlatLightLaf.setup();
+    JFrame frame = new JFrame("Stock Market Visualiser");
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
     JPanel mainPanel = new JPanel(new BorderLayout());
     mainPanel.setBorder(new EmptyBorder(10,10,10,10));
 
-    // Input Panel
-    JPanel inputPanel = new JPanel();
-    inputPanel.setLayout(new BoxLayout(inputPanel, BoxLayout.Y_AXIS));
-    inputPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    JPanel inputPanel = new JPanel(new GridBagLayout());
+
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.anchor = GridBagConstraints.WEST;
+    gbc.gridx = 0;
+    gbc.gridy = GridBagConstraints.RELATIVE;
+    gbc.insets = new Insets(5, 5, 5, 5);
+    gbc.fill = GridBagConstraints.HORIZONTAL; // Make components fill horizontally
+    gbc.weightx = 1.0;
+
 
     JLabel instructionLabel = new JLabel("Symbol:");
-    instructionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
     JTextField tickerField = new JTextField();
-    tickerField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
 
     JButton submitButton = new JButton("Submit");
 
     countLabel = new JLabel("Presses in last minute: 0");
-    countLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
     // Start Date Picker Panel
     JPanel startDatePanel = new JPanel();
@@ -85,8 +92,8 @@ public class UI {
     properties.put("text.year", "Year");
     JDatePanelImpl datePanelStart = new JDatePanelImpl(modelStart, properties);
     JDatePickerImpl datePickerStart = new JDatePickerImpl(datePanelStart, new DateComponentFormatter());
-    startDatePanel.add(startDateLabel, BorderLayout.NORTH);
-    startDatePanel.add(datePickerStart, BorderLayout.CENTER);
+    startDatePanel.add(startDateLabel);
+    startDatePanel.add(datePickerStart);
 
     // End Date Picker Panel
     JPanel endDatePanel = new JPanel();
@@ -94,21 +101,23 @@ public class UI {
     UtilDateModel modelEnd = new UtilDateModel();
     JDatePanelImpl datePanelEnd = new JDatePanelImpl(modelEnd, properties);
     JDatePickerImpl datePickerEnd = new JDatePickerImpl(datePanelEnd, new DateComponentFormatter());
-    endDatePanel.add(endDateLabel, BorderLayout.NORTH);
-    endDatePanel.add(datePickerEnd, BorderLayout.CENTER);
+    endDatePanel.add(endDateLabel);
+    endDatePanel.add(datePickerEnd);
 
-    inputPanel.add(instructionLabel);
-    inputPanel.add(tickerField);
-    inputPanel.add(startDatePanel);
-    inputPanel.add(endDatePanel);
-    inputPanel.add(submitButton);
-    inputPanel.add(countLabel);
+    inputPanel.add(instructionLabel, gbc);
+    inputPanel.add(tickerField, gbc);
+    inputPanel.add(startDatePanel, gbc);
+    inputPanel.add(endDatePanel, gbc);
+    inputPanel.add(submitButton, gbc);
+    inputPanel.add(countLabel, gbc);
 
     mainPanel.add(inputPanel, BorderLayout.WEST);
 
     // Chart Panel
     JPanel chartPanel = new JPanel(new BorderLayout());
     chartPanel.setPreferredSize(new Dimension(800, 600)); // Set preferred size
+    chartPanel.setBackground(Color.WHITE);
+
     mainPanel.add(chartPanel, BorderLayout.CENTER);
 
     submitButton.addActionListener(e -> {
@@ -220,7 +229,7 @@ public class UI {
 
     DefaultHighLowDataset dataset = new DefaultHighLowDataset(thisStock.getTicker(), date, high, low, open, close, volume);
     JFreeChart chart = ChartFactory.createCandlestickChart(
-            "",
+            "Prices and Volume for " + thisStock.getTicker() + " from " + from + " to " + to,
             "Date",
             "Price",
             dataset,
@@ -244,6 +253,11 @@ public class UI {
     // Set renderer for the volume dataset
     XYBarRenderer volumeRenderer = new XYBarRenderer();
     plot.setRenderer(1, volumeRenderer);
+
+    Font segoeUIFont = new Font("Segoe UI", Font.PLAIN, 14);
+    Font segoeUITitleFont = new Font("Segoe UI", Font.BOLD, 18);
+
+    chart.getTitle().setFont(segoeUIFont);
 
     return chart;
   }
