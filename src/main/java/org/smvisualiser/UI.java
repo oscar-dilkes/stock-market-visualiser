@@ -12,7 +12,6 @@ import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.plot.XYPlot;
-import org.jfree.chart.renderer.xy.CandlestickRenderer;
 import org.jfree.chart.renderer.xy.XYBarRenderer;
 import org.jfree.data.xy.DefaultHighLowDataset;
 import org.jfree.data.xy.XYSeries;
@@ -154,7 +153,7 @@ public class UI {
             return;
           }
 
-          JFreeChart chart = createLineChart(thisStock, from, to);
+          JFreeChart chart = createChart(thisStock, from, to);
 
           XYPlot plot = (XYPlot) chart.getPlot();
           ValueAxis xAxis = plot.getDomainAxis();
@@ -207,7 +206,7 @@ public class UI {
   }
 
 
-  public static JFreeChart createLineChart(Stock thisStock, String from, String to) {
+  public static JFreeChart createChart(Stock thisStock, String from, String to) {
     List<StockDataPoint> dataPoints = thisStock.getStockDataPoints();
 
     Date[] date = new Date[dataPoints.size()];
@@ -237,22 +236,6 @@ public class UI {
     );
 
     XYPlot plot = (XYPlot) chart.getPlot();
-    NumberAxis volumeAxis = new NumberAxis("Volume");
-    volumeAxis.setNumberFormatOverride(new MillionsNumberFormat());  // Custom format for displaying in millions
-    plot.setRangeAxis(1, volumeAxis);
-
-    // Secondary dataset for volume
-    XYSeries volumeSeries = new XYSeries("Volume");
-    for (int i = 0; i < dataPoints.size(); i++) {
-      volumeSeries.add(date[i].getTime(), volume[i]);
-    }
-    XYSeriesCollection volumeDataset = new XYSeriesCollection(volumeSeries);
-    plot.setDataset(1, volumeDataset);
-    plot.mapDatasetToRangeAxis(1, 1);
-
-    // Set renderer for the volume dataset
-    XYBarRenderer volumeRenderer = new XYBarRenderer();
-    plot.setRenderer(1, volumeRenderer);
 
     Font segoeUIFont = new Font("Segoe UI", Font.PLAIN, 14);
     Font segoeUITitleFont = new Font("Segoe UI", Font.BOLD, 18);
