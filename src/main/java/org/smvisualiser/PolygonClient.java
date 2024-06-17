@@ -1,13 +1,20 @@
 package org.smvisualiser;
 
+import com.google.gson.*;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.ProtocolException;
+import java.net.URL;
 import java.nio.file.*;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class PolygonClient {
@@ -29,10 +36,30 @@ public class PolygonClient {
     return Files.readString(Paths.get("polygon_key")).trim();
   }
 
-  public Stock retrieveData(String ticker, int multiplier, String timespan, String from, String to) throws IOException {
+  public List<Stock> fetchAndParseStocks() throws IOException {
+    String url = String.format("%s/v3/reference/tickers?active=true&limit=1000&apiKey=%s",
+            BASE_URL, API_KEY);
+
+    Request request = new Request.Builder()
+            .url(url)
+            .build();
+    try(Response response = httpClient.newCall(request).execute()) {
+      if (!response.isSuccessful()) {
+        return null;
+      }
+      else {
+        assert response.body() != null;
+        String responseBody = response.body().string();
+        JsonObject data = gson.fromJson(responseBody, JsonObject.class);
+        return StockDataParser.parseStocks(data);
+      }
+    }
+  }
+
+  public void retrieveData(Stock stock, int multiplier, String timespan, String from, String to) throws IOException {
 
     String url = String.format("%s/v2/aggs/ticker/%s/range/%d/%s/%s/%s?apiKey=%s",
-            BASE_URL, ticker, multiplier, timespan, from, to, API_KEY);
+            BASE_URL, stock.getTicker(), multiplier, timespan, from, to, API_KEY);
 
     Request request = new Request.Builder()
             .url(url)
@@ -40,12 +67,12 @@ public class PolygonClient {
 
     try(Response response = httpClient.newCall(request).execute()) {
       if (!response.isSuccessful()) {
-        return new Stock(ticker, null, false);
+        stock.setStockDataPoints(null, false);
       }
       else {
         String responseBody = response.body().string();
         JsonObject data = gson.fromJson(responseBody, JsonObject.class);
-        return new Stock(ticker, data, true);
+        stock.setStockDataPoints(data, true);
       }
     }
 

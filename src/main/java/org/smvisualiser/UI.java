@@ -1,5 +1,6 @@
 package org.smvisualiser;
 
+import com.formdev.flatlaf.FlatIntelliJLaf;
 import com.formdev.flatlaf.FlatLightLaf;
 import org.jdatepicker.impl.DateComponentFormatter;
 import org.jdatepicker.impl.JDatePanelImpl;
@@ -17,8 +18,11 @@ import org.jfree.chart.labels.StandardXYToolTipGenerator;
 import org.jfree.chart.plot.CombinedDomainXYPlot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
+import org.jfree.chart.renderer.category.BarRenderer;
 import org.jfree.chart.renderer.xy.CandlestickRenderer;
+import org.jfree.chart.renderer.xy.StandardXYBarPainter;
 import org.jfree.chart.renderer.xy.XYBarRenderer;
+import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.data.time.Day;
 import org.jfree.data.time.RegularTimePeriod;
 import org.jfree.data.time.TimeSeries;
@@ -33,6 +37,7 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.geom.RectangularShape;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -53,8 +58,8 @@ public class UI {
 
   private static JLabel countLabel;
   private static LinkedList<Long> pressTimestamps = new LinkedList<>();
-  private static final Font FONT = new JLabel().getFont();
-
+  private static List<Stock> stockList;
+  private static PolygonClient client;
 
   public static void display() {
     SwingUtilities.invokeLater(UI::createAndShowGUI);
@@ -68,7 +73,8 @@ public class UI {
   }
 
   public static void createAndShowGUI() {
-    FlatLightLaf.setup();
+//    FlatLightLaf.setup();
+    FlatIntelliJLaf.setup();
     JFrame frame = new JFrame("Stock Market Visualiser");
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
@@ -88,7 +94,17 @@ public class UI {
 
     JLabel instructionLabel = new JLabel("Symbol:");
 
-    JTextField tickerField = new JTextField();
+    try {
+      client = new PolygonClient();
+      stockList = client.fetchAndParseStocks();
+    } catch (IOException ex) {
+      throw new RuntimeException();
+    }
+
+    JComboBox<Stock> stockBox = new JComboBox<>();
+    for (Stock stock : stockList) {
+      stockBox.addItem(stock);
+    }
 
     JButton submitButton = new JButton("Submit");
 
@@ -117,7 +133,7 @@ public class UI {
     endDatePanel.add(datePickerEnd);
 
     inputPanel.add(instructionLabel, gbc);
-    inputPanel.add(tickerField, gbc);
+    inputPanel.add(stockBox, gbc);
     inputPanel.add(startDatePanel, gbc);
     inputPanel.add(endDatePanel, gbc);
     inputPanel.add(submitButton, gbc);
@@ -141,7 +157,7 @@ public class UI {
       pressTimestamps.add(currentTime);
       updateCountLabel();
 
-      String ticker = tickerField.getText().trim();
+      Stock thisStock = (Stock) stockBox.getSelectedItem();
 
       Date startDate = (Date) datePickerStart.getModel().getValue();
       Date endDate = (Date) datePickerEnd.getModel().getValue();
@@ -155,11 +171,9 @@ public class UI {
 
       String from = sdf.format(startDate);
       String to = sdf.format(endDate);
-
-      if (!ticker.isEmpty()) {
         try {
-          PolygonClient client = new PolygonClient();
-          Stock thisStock = client.retrieveData(ticker, 1, "day", from, to);
+          client = new PolygonClient();
+          client.retrieveData(thisStock, 1, "day", from, to);
 
           if (!thisStock.isRetrievalSuccess()) {
             JOptionPane.showMessageDialog(frame, "Data retrieval error: Ensure ticker symbol exists and date range is valid.");
@@ -184,21 +198,13 @@ public class UI {
         } catch (IOException ex) {
           throw new RuntimeException(ex);
         }
-      } else {
-        JOptionPane.showMessageDialog(frame, "Please enter a symbol.");
-      }
     });
 
     frame.getContentPane().add(mainPanel);
     frame.pack();
     frame.setVisible(true);
 
-    Timer timer = new Timer(1000, new ActionListener() {
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        updateCountLabel();
-      }
-    });
+    Timer timer = new Timer(1000, e -> updateCountLabel());
     timer.start();
   }
 
@@ -249,6 +255,10 @@ public class UI {
     CandlestickRenderer candlestickRenderer = new CandlestickRenderer(CandlestickRenderer.WIDTHMETHOD_AVERAGE,
             false, new HighLowItemLabelGenerator(new SimpleDateFormat("kk:mm"), new DecimalFormat("0.000")));
 
+    candlestickRenderer.setUpPaint(new Color(0, 153, 51));
+    candlestickRenderer.setDownPaint(new Color(204, 0, 0));
+    candlestickRenderer.setSeriesPaint(0, Color.BLACK);
+
     XYPlot candlestickSubplot = new XYPlot(candlestickDataset, null, priceAxis, candlestickRenderer);
     candlestickSubplot.setBackgroundPaint(Color.white);
 
@@ -274,10 +284,16 @@ public class UI {
 
     volumeAxis.setNumberFormatOverride(new MillionsNumberFormat());
 
-    XYBarRenderer timeRenderer = new XYBarRenderer();
+    XYBarRenderer.setDefaultBarPainter(new StandardXYBarPainter());
+
+    XYBarRenderer timeRenderer = new XYBarRenderer(0.20);
     timeRenderer.setShadowVisible(false);
     timeRenderer.setDefaultToolTipGenerator(new StandardXYToolTipGenerator("Volume--> Time={1} Size={2}",
             new SimpleDateFormat("kk:mm"), new DecimalFormat("0")));
+
+    timeRenderer.setSeriesPaint(0, new Color(116, 166, 213, 255));
+    timeRenderer.setDrawBarOutline(true);
+    timeRenderer.setDefaultOutlinePaint(Color.BLACK);
 
     XYPlot volumeSubplot = new XYPlot(volumeDataset, null, volumeAxis, timeRenderer);
     volumeSubplot.setBackgroundPaint(Color.white);
@@ -297,7 +313,7 @@ public class UI {
     Font segoeUITitleFont = new Font("Segoe UI", Font.BOLD, 18);
 
     JFreeChart chart = new JFreeChart(
-            "Prices and Volume for " + thisStock.getTicker() + " from " + from + " to " + to,
+            "Prices and Volume for " + thisStock.getName() + " from " + from + " to " + to,
             segoeUITitleFont,
             mainPlot,
             true
