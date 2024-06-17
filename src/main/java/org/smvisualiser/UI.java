@@ -9,10 +9,22 @@ import org.jetbrains.annotations.NotNull;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.DateAxis;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.axis.ValueAxis;
+import org.jfree.chart.labels.HighLowItemLabelGenerator;
+import org.jfree.chart.labels.StandardXYToolTipGenerator;
+import org.jfree.chart.plot.CombinedDomainXYPlot;
+import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
+import org.jfree.chart.renderer.xy.CandlestickRenderer;
 import org.jfree.chart.renderer.xy.XYBarRenderer;
+import org.jfree.data.time.Day;
+import org.jfree.data.time.RegularTimePeriod;
+import org.jfree.data.time.TimeSeries;
+import org.jfree.data.time.TimeSeriesCollection;
+import org.jfree.data.time.ohlc.OHLCSeries;
+import org.jfree.data.time.ohlc.OHLCSeriesCollection;
 import org.jfree.data.xy.DefaultHighLowDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
@@ -22,6 +34,7 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -207,40 +220,90 @@ public class UI {
 
 
   public static JFreeChart createChart(Stock thisStock, String from, String to) {
+
+    /**
+     * Retrieve and substantiate dataset
+     */
+
     List<StockDataPoint> dataPoints = thisStock.getStockDataPoints();
 
-    Date[] date = new Date[dataPoints.size()];
-    double[] high = new double[dataPoints.size()];
-    double[] low = new double[dataPoints.size()];
-    double[] open = new double[dataPoints.size()];
-    double[] close = new double[dataPoints.size()];
-    double[] volume = new double[dataPoints.size()];
+    OHLCSeries ohlcSeries = new OHLCSeries(thisStock.getTicker());
+    TimeSeries volumeSeries = new TimeSeries(thisStock.getTicker());
 
-    for (int i = 0; i < dataPoints.size(); i++) {
-      StockDataPoint dataPoint = dataPoints.get(i);
-      date[i] = new Date(dataPoint.getTimestamp());
-      high[i] = dataPoint.getHighPrice();
-      low[i] = dataPoint.getLowPrice();
-      open[i] = dataPoint.getOpenPrice();
-      close[i] = dataPoint.getClosePrice();
-      volume[i] = dataPoint.getVolume();
+    for (StockDataPoint dataPoint: dataPoints) {
+      RegularTimePeriod period = new Day(new Date(dataPoint.getTimestamp()));
+      ohlcSeries.add(period,
+              dataPoint.getOpenPrice(),
+              dataPoint.getHighPrice(),
+              dataPoint.getLowPrice(),
+              dataPoint.getClosePrice());
+      volumeSeries.add(period, dataPoint.getVolume());
     }
 
-    DefaultHighLowDataset dataset = new DefaultHighLowDataset(thisStock.getTicker(), date, high, low, open, close, volume);
-    JFreeChart chart = ChartFactory.createCandlestickChart(
-            "Prices and Volume for " + thisStock.getTicker() + " from " + from + " to " + to,
-            "Date",
-            "Price",
-            dataset,
-            false
-    );
+    OHLCSeriesCollection candlestickDataset = new OHLCSeriesCollection();
+    candlestickDataset.addSeries(ohlcSeries);
 
-    XYPlot plot = (XYPlot) chart.getPlot();
+    NumberAxis priceAxis = new NumberAxis("Price");
+    priceAxis.setAutoRangeIncludesZero(false);
+
+    CandlestickRenderer candlestickRenderer = new CandlestickRenderer(CandlestickRenderer.WIDTHMETHOD_AVERAGE,
+            false, new HighLowItemLabelGenerator(new SimpleDateFormat("kk:mm"), new DecimalFormat("0.000")));
+
+    XYPlot candlestickSubplot = new XYPlot(candlestickDataset, null, priceAxis, candlestickRenderer);
+    candlestickSubplot.setBackgroundPaint(Color.white);
+
+//    DefaultHighLowDataset dataset = new DefaultHighLowDataset(thisStock.getTicker(), date, high, low, open, close, volume);
+
+//    JFreeChart chart = ChartFactory.createCandlestickChart(
+//            "Prices and Volume for " + thisStock.getTicker() + " from " + from + " to " + to,
+//            "Date",
+//            "Price",
+//            dataset,
+//            false
+//    );
+
+    /**
+     * Create volume subplot
+     */
+
+    TimeSeriesCollection volumeDataset = new TimeSeriesCollection();
+    volumeDataset.addSeries(volumeSeries);
+
+    NumberAxis volumeAxis = new NumberAxis("Volume");
+    volumeAxis.setAutoRangeIncludesZero(false);
+
+    volumeAxis.setNumberFormatOverride(new MillionsNumberFormat());
+
+    XYBarRenderer timeRenderer = new XYBarRenderer();
+    timeRenderer.setShadowVisible(false);
+    timeRenderer.setDefaultToolTipGenerator(new StandardXYToolTipGenerator("Volume--> Time={1} Size={2}",
+            new SimpleDateFormat("kk:mm"), new DecimalFormat("0")));
+
+    XYPlot volumeSubplot = new XYPlot(volumeDataset, null, volumeAxis, timeRenderer);
+    volumeSubplot.setBackgroundPaint(Color.white);
+
+    DateAxis dateAxis = new DateAxis("Time");
+    dateAxis.setDateFormatOverride(new SimpleDateFormat("kk:mm"));
+    dateAxis.setLowerMargin(0.02);
+    dateAxis.setUpperMargin(0.02);
+
+    CombinedDomainXYPlot mainPlot = new CombinedDomainXYPlot(dateAxis);
+    mainPlot.setGap(10.0);
+    mainPlot.add(candlestickSubplot, 3);
+    mainPlot.add(volumeSubplot, 1);
+    mainPlot.setOrientation(PlotOrientation.VERTICAL);
 
     Font segoeUIFont = new Font("Segoe UI", Font.PLAIN, 14);
     Font segoeUITitleFont = new Font("Segoe UI", Font.BOLD, 18);
 
-    chart.getTitle().setFont(segoeUIFont);
+    JFreeChart chart = new JFreeChart(
+            "Prices and Volume for " + thisStock.getTicker() + " from " + from + " to " + to,
+            segoeUITitleFont,
+            mainPlot,
+            true
+    );
+
+    chart.removeLegend();
 
     return chart;
   }
