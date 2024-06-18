@@ -1,8 +1,7 @@
 package org.smvisualiser;
 
-public class StockDataPoint {
+public class StockDataPoint extends DataPoint {
 
-  private final long timestamp;
   private final double openPrice;
   private final double closePrice;
   private final double highPrice;
@@ -10,16 +9,12 @@ public class StockDataPoint {
   private final long volume;
 
   public StockDataPoint(long timestamp, double openPrice, double closePrice, double highPrice, double lowPrice, long volume) {
-    this.timestamp = timestamp;
+    super(timestamp);
     this.openPrice = openPrice;
     this.closePrice = closePrice;
     this.highPrice = highPrice;
     this.lowPrice = lowPrice;
     this.volume = volume;
-  }
-
-  public long getTimestamp() {
-    return timestamp;
   }
 
   public double getOpenPrice() {

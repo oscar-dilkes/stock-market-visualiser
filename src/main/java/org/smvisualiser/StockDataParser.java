@@ -35,4 +35,47 @@ public class StockDataParser {
     return historicalDataPoints;
   }
 
+  // Function to find the index of the given timestamp using binary search
+  private static <T extends DataPoint> int findIndex(List<T> data, long targetTimestamp) {
+    int low = 0;
+    int high = data.size() - 1;
+
+    while (low <= high) {
+      int mid = (low + high) / 2;
+      long midTimestamp = data.get(mid).getTimestamp();
+
+      if (midTimestamp < targetTimestamp) {
+        low = mid + 1;
+      } else if (midTimestamp > targetTimestamp) {
+        high = mid - 1;
+      } else {
+        return mid;
+      }
+    }
+
+    return low; // If not found, return the insertion point
+  }
+
+  public static <T extends DataPoint> List<T> getStockDataInRange(List<T> allData, long startTimestamp, long endTimestamp) {
+    int startIndex = findIndex(allData, startTimestamp);
+    int endIndex = findIndex(allData, endTimestamp);
+
+    // Ensure the endIndex is within bounds
+    if (endIndex < allData.size() && allData.get(endIndex).getTimestamp() > endTimestamp) {
+      endIndex--;
+    }
+
+    // Ensure endIndex does not exceed the list size
+    if (endIndex >= allData.size()) {
+      endIndex = allData.size() - 1;
+    }
+
+    // Extract the sublist
+    if (startIndex <= endIndex) {
+      return new ArrayList<>(allData.subList(startIndex, endIndex + 1));
+    } else {
+      return new ArrayList<>(); // Return an empty list if the range is invalid
+    }
+  }
+
 }

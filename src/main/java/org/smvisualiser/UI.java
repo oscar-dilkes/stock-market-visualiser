@@ -19,6 +19,7 @@ import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.CandlestickRenderer;
 import org.jfree.chart.renderer.xy.StandardXYBarPainter;
 import org.jfree.chart.renderer.xy.XYBarRenderer;
+import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.data.time.Day;
 import org.jfree.data.time.RegularTimePeriod;
 import org.jfree.data.time.TimeSeries;
@@ -36,10 +37,8 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
+import java.util.*;
 import java.util.List;
-import java.util.Properties;
-import java.util.LinkedList;
 import javax.swing.Timer;
 
 
@@ -178,10 +177,20 @@ public class UI {
 
       String from = sdf.format(startDate);
       String to = sdf.format(endDate);
+
+      Date currentDate = new Date();
+      Calendar calendar = Calendar.getInstance();
+      calendar.setTime(currentDate);
+      calendar.add(Calendar.YEAR, -2);
+      Date twoYearsPriorDate = calendar.getTime();
+
+      String twoYearsPrior = sdf.format(twoYearsPriorDate);
+      String today = sdf.format(currentDate);
+
         try {
           client = new PolygonClient();
           assert thisStock != null;
-          client.retrieveData(thisStock, 1, "day", from, to);
+          client.retrieveData(thisStock, 1, "day", twoYearsPrior, today);
 
           if (!thisStock.isRetrievalSuccess()) {
             JOptionPane.showMessageDialog(frame, "Data retrieval error: Ensure ticker symbol exists and date range is valid.");
@@ -190,10 +199,10 @@ public class UI {
 
           sdf = new SimpleDateFormat("dd-MM-yyyy");
 
-          from = sdf.format(startDate);
-          to = sdf.format(endDate);
+//          from = sdf.format(startDate);
+//          to = sdf.format(endDate);
 
-          JFreeChart chart = createChart(thisStock, from, to);
+          JFreeChart chart = createChart(thisStock, startDate, endDate);
 
           XYPlot plot = (XYPlot) chart.getPlot();
           ValueAxis xAxis = plot.getDomainAxis();
@@ -238,13 +247,15 @@ public class UI {
   }
 
 
-  public static JFreeChart createChart(Stock thisStock, String from, String to) {
+  public static JFreeChart createChart(Stock thisStock, Date from, Date to) {
 
     /**
      * Retrieve and substantiate dataset
      */
 
-    List<StockDataPoint> dataPoints = thisStock.getStockDataPoints();
+    List<StockDataPoint> dataPoints = StockDataParser.getStockDataInRange(thisStock.getStockDataPoints(), from.getTime(), to.getTime());
+
+    SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy");
 
     OHLCSeries ohlcSeries = new OHLCSeries(thisStock.getTicker());
     TimeSeries volumeSeries = new TimeSeries(thisStock.getTicker());
@@ -276,6 +287,34 @@ public class UI {
     candlestickSubplot.setBackgroundPaint(Color.white);
 
     /**
+     * Create RSI subplot
+     */
+
+    DataProcessor dataProcessor = new DataProcessor();
+
+    List<RSIValue> rsiValuesFull = dataProcessor.RSICalculator(thisStock.getStockDataPoints());
+    List<RSIValue> rsiValues = StockDataParser.getStockDataInRange(rsiValuesFull, from.getTime(), to.getTime());
+
+    TimeSeries rsiSeries = new TimeSeries("RSI");
+
+    for (RSIValue rsiValue : rsiValues) {
+      RegularTimePeriod period = new Day(new Date(rsiValue.getTimestamp()));
+      rsiSeries.add(period, rsiValue.getRsi());
+    }
+
+    TimeSeriesCollection rsiDataset = new TimeSeriesCollection();
+    rsiDataset.addSeries(rsiSeries);
+
+    NumberAxis rsiAxis = new NumberAxis("RSI");
+    rsiAxis.setAutoRangeIncludesZero(false);
+
+    XYLineAndShapeRenderer rsiRenderer = new XYLineAndShapeRenderer(true, false);
+    rsiRenderer.setSeriesPaint(0, Color.BLACK);
+
+    XYPlot rsiSubplot = new XYPlot(rsiDataset, null, rsiAxis, rsiRenderer);
+    rsiSubplot.setBackgroundPaint(Color.white);
+
+    /**
      * Create volume subplot
      */
 
@@ -284,8 +323,7 @@ public class UI {
 
     NumberAxis volumeAxis = new NumberAxis("Volume");
     volumeAxis.setAutoRangeIncludesZero(false);
-
-    volumeAxis.setNumberFormatOverride(new MillionsNumberFormat());
+    volumeAxis.setNumberFormatOverride(new DecimalFormat("#,###"));
 
     XYBarRenderer.setDefaultBarPainter(new StandardXYBarPainter());
 
@@ -310,7 +348,7 @@ public class UI {
     mainPlot.setGap(10.0);
     mainPlot.add(candlestickSubplot, 3);
     mainPlot.add(volumeSubplot, 1);
-    mainPlot.setOrientation(PlotOrientation.VERTICAL);
+    mainPlot.add(rsiSubplot, 1); // Add RSI subplot
 
     Font segoeUIFont = new Font("Segoe UI", Font.PLAIN, 14);
     Font segoeUITitleFont = new Font("Segoe UI", Font.BOLD, 18);
