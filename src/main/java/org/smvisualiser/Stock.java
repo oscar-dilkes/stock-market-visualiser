@@ -10,7 +10,10 @@ public class Stock {
   private final String sector;
 
   private List<StockDataPoint> stockDataPoints;
-  private boolean retrievalSuccess;
+  private boolean retrievalSuccess = false;
+
+  private List<RSIValue> rsiValues;
+  private boolean rsiCalculated = false;
 
   public Stock(String ticker, String name, String sector) {
     this.ticker = ticker;
@@ -26,6 +29,11 @@ public class Stock {
     else {
       this.stockDataPoints = null;
     }
+  }
+
+  public void setRsiValues(List<RSIValue> rsiValues) {
+    this.rsiCalculated = true;
+    this.rsiValues = rsiValues;
   }
 
   public String getTicker() {
@@ -46,6 +54,14 @@ public class Stock {
 
   public boolean isRetrievalSuccess() {
     return this.retrievalSuccess;
+  }
+
+  public List<RSIValue> getRsiValues() {
+    return this.rsiValues;
+  }
+
+  public boolean isRsiCalculated() {
+    return rsiCalculated;
   }
 
   @Override

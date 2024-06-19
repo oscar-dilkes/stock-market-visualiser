@@ -67,6 +67,28 @@ public class DataProcessor {
     return rsiValues;
   }
 
+  public List<MAValue> SMACalculator (List<StockDataPoint> dataPoints, int duration) {
+    List<MAValue> maValues = new ArrayList<>();
+
+    double initialVal = dataPoints.get(0).getClosePrice();
+    double maDividend = initialVal;
+
+    int x = Math.min(duration, dataPoints.size());
+
+    for (int i = 1; i < x; i++) {
+      maDividend += dataPoints.get(i).getClosePrice();
+    }
+
+    for (int i = duration; i < dataPoints.size(); i++) {
+      maDividend = maDividend - initialVal + dataPoints.get(i).getClosePrice();
+      initialVal = dataPoints.get(i - duration).getClosePrice();
+      maValues.add(new MAValue(maDividend/duration, dataPoints.get(i).getTimestamp()));
+    }
+
+    return maValues;
+
+  }
+
   // to find from date in data for displaying candlesticks, when adding
   // the data by parsing json, I should identify when im at the from date and store the index
   // write a cool algorithm to do this

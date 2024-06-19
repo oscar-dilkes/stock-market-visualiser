@@ -14,7 +14,6 @@ import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.labels.HighLowItemLabelGenerator;
 import org.jfree.chart.labels.StandardXYToolTipGenerator;
 import org.jfree.chart.plot.CombinedDomainXYPlot;
-import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.CandlestickRenderer;
 import org.jfree.chart.renderer.xy.StandardXYBarPainter;
@@ -39,6 +38,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.swing.Timer;
 
 
@@ -48,6 +48,8 @@ public class UI {
   private static LinkedList<Long> pressTimestamps = new LinkedList<>();
   private static List<Stock> stockList;
   private static PolygonClient client;
+
+  private static AtomicReference<Boolean> isMa;
 
   public static void display() {
     SwingUtilities.invokeLater(UI::createAndShowGUI);
@@ -136,12 +138,34 @@ public class UI {
     endDatePanel.add(endDateLabel);
     endDatePanel.add(datePickerEnd);
 
+    JCheckBox showMA = new JCheckBox("Show Simple Moving Average");
+
+    JLabel periodLengthLabel = new JLabel("Period Length:");
+    JTextField periodLengthField = new JTextField(20); // or JTextArea
+
+    // Initially hide the textbox
+    periodLengthLabel.setVisible(false);
+    periodLengthField.setVisible(false);
+
+    isMa = new AtomicReference<>(false);
+
+    // Add action listener to checkbox
+    showMA.addActionListener(e -> {
+      // Toggle visibility of the textbox
+      periodLengthLabel.setVisible(showMA.isSelected());
+      periodLengthField.setVisible(showMA.isSelected());
+      isMa.set(showMA.isSelected());
+    });
+
     inputPanel.add(indexLabel, gbc);
     inputPanel.add(indexBox, gbc);
     inputPanel.add(symbolLabel, gbc);
     inputPanel.add(stockBox, gbc);
     inputPanel.add(startDatePanel, gbc);
     inputPanel.add(endDatePanel, gbc);
+    inputPanel.add(showMA, gbc);
+    inputPanel.add(periodLengthLabel, gbc);
+    inputPanel.add(periodLengthField, gbc);
     inputPanel.add(submitButton, gbc);
     inputPanel.add(countLabel, gbc);
 
@@ -188,9 +212,11 @@ public class UI {
       String today = sdf.format(currentDate);
 
         try {
-          client = new PolygonClient();
-          assert thisStock != null;
-          client.retrieveData(thisStock, 1, "day", twoYearsPrior, today);
+          if (!thisStock.isRetrievalSuccess()) {
+            client = new PolygonClient();
+            assert thisStock != null;
+            client.retrieveData(thisStock, 1, "day", twoYearsPrior, today);
+          }
 
           if (!thisStock.isRetrievalSuccess()) {
             JOptionPane.showMessageDialog(frame, "Data retrieval error: Ensure ticker symbol exists and date range is valid.");
@@ -202,7 +228,9 @@ public class UI {
 //          from = sdf.format(startDate);
 //          to = sdf.format(endDate);
 
-          JFreeChart chart = createChart(thisStock, startDate, endDate);
+          boolean showMa = isMa.get();
+
+          JFreeChart chart = createChart(thisStock, startDate, endDate, showMa, periodLengthField, frame);
 
           XYPlot plot = (XYPlot) chart.getPlot();
           ValueAxis xAxis = plot.getDomainAxis();
@@ -243,11 +271,12 @@ public class UI {
     chartPanelComponent.setFillZoomRectangle(false);
     chartPanelComponent.setZoomOutlinePaint(new Color(0f, 0f, 0f, 0f));
     chartPanelComponent.setZoomAroundAnchor(true);
+    chartPanelComponent.setZoomOutFactor(1.0); // Set maximum zoom out factor to 1.0
     return chartPanelComponent;
   }
 
 
-  public static JFreeChart createChart(Stock thisStock, Date from, Date to) {
+  public static JFreeChart createChart(Stock thisStock, Date from, Date to, Boolean isMa, JTextField periodLengthField, JFrame frame) {
 
     /**
      * Retrieve and substantiate dataset
@@ -292,7 +321,15 @@ public class UI {
 
     DataProcessor dataProcessor = new DataProcessor();
 
-    List<RSIValue> rsiValuesFull = dataProcessor.RSICalculator(thisStock.getStockDataPoints());
+    List<RSIValue> rsiValuesFull;
+
+    if (!thisStock.isRsiCalculated()) {
+      rsiValuesFull = dataProcessor.RSICalculator(thisStock.getStockDataPoints());
+      thisStock.setRsiValues(rsiValuesFull);
+    } else {
+      rsiValuesFull = thisStock.getRsiValues();
+    }
+
     List<RSIValue> rsiValues = StockDataParser.getStockDataInRange(rsiValuesFull, from.getTime(), to.getTime());
 
     TimeSeries rsiSeries = new TimeSeries("RSI");
@@ -323,7 +360,7 @@ public class UI {
 
     NumberAxis volumeAxis = new NumberAxis("Volume");
     volumeAxis.setAutoRangeIncludesZero(false);
-    volumeAxis.setNumberFormatOverride(new DecimalFormat("#,###"));
+    volumeAxis.setNumberFormatOverride(new MillionsNumberFormat());
 
     XYBarRenderer.setDefaultBarPainter(new StandardXYBarPainter());
 
@@ -339,6 +376,10 @@ public class UI {
     XYPlot volumeSubplot = new XYPlot(volumeDataset, null, volumeAxis, timeRenderer);
     volumeSubplot.setBackgroundPaint(Color.white);
 
+    /**
+     * Create graph
+     */
+
     DateAxis dateAxis = new DateAxis("Time");
     dateAxis.setDateFormatOverride(new SimpleDateFormat("kk:mm"));
     dateAxis.setLowerMargin(0.02);
@@ -352,6 +393,41 @@ public class UI {
 
     Font segoeUIFont = new Font("Segoe UI", Font.PLAIN, 14);
     Font segoeUITitleFont = new Font("Segoe UI", Font.BOLD, 18);
+
+
+    /**
+     * Create MA subplot
+     */
+
+    if (isMa) {
+      // Retrieve SMA data using your smaCalculator method
+      int periodLengthValue = Integer.parseInt(periodLengthField.getText().trim()); // Parse period length
+      List<MAValue> movingAveragesFull = dataProcessor.SMACalculator(thisStock.getStockDataPoints(), periodLengthValue);
+      List<MAValue> movingAverages = StockDataParser.getStockDataInRange(movingAveragesFull, from.getTime(), to.getTime());
+
+      if (movingAverages.isEmpty()) {
+        JOptionPane.showMessageDialog(frame, "Couldn't show moving averages for this date range.");
+      }
+
+      // Create a TimeSeries for SMA
+      TimeSeries smaSeries = new TimeSeries("SMA(" + periodLengthValue + ")");
+      for (MAValue mav : movingAverages) {
+        RegularTimePeriod period = new Day(new Date(mav.getTimestamp()));
+        smaSeries.add(period, mav.getMa());
+      }
+
+      // Create a dataset for SMA
+      TimeSeriesCollection smaDataset = new TimeSeriesCollection();
+      smaDataset.addSeries(smaSeries);
+
+      // Create renderer for SMA (use XYLineAndShapeRenderer or similar)
+      XYLineAndShapeRenderer smaRenderer = new XYLineAndShapeRenderer(true, false);
+      smaRenderer.setSeriesPaint(0, Color.BLUE); // Set color for SMA line
+
+      candlestickSubplot.setDataset(1, smaDataset);
+      candlestickSubplot.setRenderer(1, smaRenderer);
+    }
+
 
     JFreeChart chart = new JFreeChart(
             thisStock.getName() + " from " + from + " to " + to,
