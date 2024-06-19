@@ -1,10 +1,7 @@
 package org.smvisualiser;
 
 import com.formdev.flatlaf.FlatIntelliJLaf;
-import org.jdatepicker.impl.DateComponentFormatter;
-import org.jdatepicker.impl.JDatePanelImpl;
-import org.jdatepicker.impl.JDatePickerImpl;
-import org.jdatepicker.impl.UtilDateModel;
+import com.toedter.calendar.JDateChooser;
 import org.jetbrains.annotations.NotNull;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -45,7 +42,7 @@ import javax.swing.Timer;
 public class UI {
 
   private static JLabel countLabel;
-  private static LinkedList<Long> pressTimestamps = new LinkedList<>();
+  private static LinkedList<Long> requestTimestamps = new LinkedList<>();
   private static List<Stock> stockList;
   private static PolygonClient client;
 
@@ -116,27 +113,34 @@ public class UI {
 
     countLabel = new JLabel("Presses in last minute: 0");
 
+    Date currentDate = new Date();
+    Calendar calendar = Calendar.getInstance();
+    calendar.setTime(currentDate);
+    calendar.add(Calendar.YEAR, -2);
+
+    Date twoYearsPriorDate = calendar.getTime();
+
     // Start Date Picker Panel
     JPanel startDatePanel = new JPanel();
     JLabel startDateLabel = new JLabel("Start Date");
-    UtilDateModel modelStart = new UtilDateModel();
-    Properties properties = new Properties();
-    properties.put("text.today", "Today");
-    properties.put("text.month", "Month");
-    properties.put("text.year", "Year");
-    JDatePanelImpl datePanelStart = new JDatePanelImpl(modelStart, properties);
-    JDatePickerImpl datePickerStart = new JDatePickerImpl(datePanelStart, new DateComponentFormatter());
+
+    JDateChooser startDateChooser = new JDateChooser();
+    startDateChooser.setMinSelectableDate(twoYearsPriorDate);
+    startDateChooser.setMaxSelectableDate(currentDate);
+
     startDatePanel.add(startDateLabel);
-    startDatePanel.add(datePickerStart);
+    startDatePanel.add(startDateChooser);
 
     // End Date Picker Panel
     JPanel endDatePanel = new JPanel();
     JLabel endDateLabel = new JLabel("End Date");
-    UtilDateModel modelEnd = new UtilDateModel();
-    JDatePanelImpl datePanelEnd = new JDatePanelImpl(modelEnd, properties);
-    JDatePickerImpl datePickerEnd = new JDatePickerImpl(datePanelEnd, new DateComponentFormatter());
-    endDatePanel.add(endDateLabel);
-    endDatePanel.add(datePickerEnd);
+
+    JDateChooser endDateChooser = new JDateChooser();
+    endDateChooser.setMinSelectableDate(twoYearsPriorDate);
+    endDateChooser.setMaxSelectableDate(currentDate);
+
+    startDatePanel.add(endDateLabel);
+    startDatePanel.add(endDateChooser);
 
     JCheckBox showMA = new JCheckBox("Show Simple Moving Average");
 
@@ -179,43 +183,37 @@ public class UI {
     mainPanel.add(chartPanel, BorderLayout.CENTER);
 
     submitButton.addActionListener(e -> {
-      if (pressTimestamps.size() >= 5) {
+      if (requestTimestamps.size() >= 5) {
         JOptionPane.showMessageDialog(frame, "Request limit exceeded: Try again once counter goes below 5.");
         return;
       }
       long currentTime = System.currentTimeMillis();
-      pressTimestamps.add(currentTime);
-      updateCountLabel();
+
+      SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+
+      String twoYearsPrior = sdf.format(twoYearsPriorDate);
+      String today = sdf.format(currentDate);
 
       Stock thisStock = (Stock) stockBox.getSelectedItem();
 
-      Date startDate = (Date) datePickerStart.getModel().getValue();
-      Date endDate = (Date) datePickerEnd.getModel().getValue();
+      Date startDate = startDateChooser.getDate();
+      Date endDate = endDateChooser.getDate();
 
       if (startDate == null || endDate == null) {
         JOptionPane.showMessageDialog(frame, "Please select both start and end dates.");
         return;  // Exit the ActionListener if dates are not selected
       }
 
-      SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-
       String from = sdf.format(startDate);
       String to = sdf.format(endDate);
-
-      Date currentDate = new Date();
-      Calendar calendar = Calendar.getInstance();
-      calendar.setTime(currentDate);
-      calendar.add(Calendar.YEAR, -2);
-      Date twoYearsPriorDate = calendar.getTime();
-
-      String twoYearsPrior = sdf.format(twoYearsPriorDate);
-      String today = sdf.format(currentDate);
 
         try {
           if (!thisStock.isRetrievalSuccess()) {
             client = new PolygonClient();
             assert thisStock != null;
             client.retrieveData(thisStock, 1, "day", twoYearsPrior, today);
+            requestTimestamps.add(currentTime);
+            updateCountLabel();
           }
 
           if (!thisStock.isRetrievalSuccess()) {
@@ -428,9 +426,8 @@ public class UI {
       candlestickSubplot.setRenderer(1, smaRenderer);
     }
 
-
     JFreeChart chart = new JFreeChart(
-            thisStock.getName() + " from " + from + " to " + to,
+            thisStock.getName() + " from " + sdf.format(from) + " to " + sdf.format(to),
             segoeUITitleFont,
             mainPlot,
             true
@@ -445,13 +442,13 @@ public class UI {
     long currentTime = System.currentTimeMillis();
     long oneMinuteAgo = currentTime - 60000;
 
-    while (!pressTimestamps.isEmpty() && pressTimestamps.getFirst() < oneMinuteAgo) {
-      pressTimestamps.removeFirst();
+    while (!requestTimestamps.isEmpty() && requestTimestamps.getFirst() < oneMinuteAgo) {
+      requestTimestamps.removeFirst();
     }
 
-    int count = pressTimestamps.size();
+    int count = requestTimestamps.size();
 
-    countLabel.setText("Presses in last minute: " + count);
+    countLabel.setText("Requests made in last minute: " + count);
     if (count >= 5) {
       countLabel.setForeground(Color.RED);
     } else {
