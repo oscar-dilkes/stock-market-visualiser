@@ -14,7 +14,7 @@ import java.util.List;
 public class IndexWikipediaScraper {
   List<Stock> stockList;
 
-  List<Stock> scraper(String url) {
+  private List<Stock> scraper(String url) {
     String decodedUrl = URLDecoder.decode(url, StandardCharsets.UTF_8);
     stockList = new ArrayList<>();
     try {
@@ -54,5 +54,12 @@ public class IndexWikipediaScraper {
       ex.printStackTrace();
     }
     return stockList;
+  }
+
+  public List<Stock> getStockList(Index index) {
+    if (index != null) {
+      return scraper(index.getWikipediaUrl());
+    }
+    return null;
   }
 }

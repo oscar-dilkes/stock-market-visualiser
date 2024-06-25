@@ -6,7 +6,7 @@ import java.util.List;
 
 public class DataProcessor {
 
-  public List<RSIValue> RSICalculator (List<StockDataPoint> dataPoints) {
+  public static List<RSIValue> RSICalculator(List<StockDataPoint> dataPoints) {
     List<RSIValue> rsiValues = new ArrayList<>();
 
     double initialGains = 0;
@@ -89,10 +89,4 @@ public class DataProcessor {
 
   }
 
-  // to find from date in data for displaying candlesticks, when adding
-  // the data by parsing json, I should identify when im at the from date and store the index
-  // write a cool algorithm to do this
-
-  // collect 2 years historical data
-  // update submit button counter to be a request counter
 }

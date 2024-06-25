@@ -22,6 +22,7 @@ public class Stock {
   }
 
   public void setStockDataPoints (JsonObject data, boolean retrievalSuccess) {
+    System.out.println(data);
     this.retrievalSuccess = retrievalSuccess;
     if (retrievalSuccess) {
       this.stockDataPoints = StockDataParser.parseHistoricalDataPoints(data);

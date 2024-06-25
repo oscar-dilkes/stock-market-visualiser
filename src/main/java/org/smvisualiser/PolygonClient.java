@@ -36,7 +36,7 @@ public class PolygonClient {
     return Files.readString(Paths.get("polygon_key")).trim();
   }
 
-  public void retrieveData(Stock stock, int multiplier, String timespan, String from, String to) throws IOException {
+  private void retrieveData(Stock stock, int multiplier, String timespan, String from, String to) throws IOException {
 
     String url = String.format("%s/v2/aggs/ticker/%s/range/%d/%s/%s/%s?apiKey=%s",
             BASE_URL, stock.getTicker(), multiplier, timespan, from, to, API_KEY);
@@ -52,9 +52,20 @@ public class PolygonClient {
       else {
         String responseBody = response.body().string();
         JsonObject data = gson.fromJson(responseBody, JsonObject.class);
-        stock.setStockDataPoints(data, true);
+        JsonPrimitive resultCount = data.getAsJsonPrimitive("resultsCount");
+        int resultCountNum = resultCount.getAsInt();
+        if (resultCountNum > 0) {
+          stock.setStockDataPoints(data, true);
+        }
+        else {
+          stock.setStockDataPoints(null, false);
+        }
       }
     }
 
+  }
+
+  public void retrieveStockData(Stock stock, String startDate, String endDate) throws IOException {
+    retrieveData(stock, 1, "day", startDate, endDate);
   }
 }
