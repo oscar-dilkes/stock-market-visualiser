@@ -13,7 +13,7 @@ import java.util.Date;
 import java.util.List;
 
 public class EventHandlers {
-  public void handleSubmit(JFrame frame, JComboBox<Stock> stockBox, JDateChooser startDateChooser, JDateChooser endDateChooser, JCheckBox showMA, JTextField periodLengthField, JPanel chartPanel) throws IOException {
+  public void handleSubmit(JFrame frame, JComboBox<Stock> stockBox, JDateChooser startDateChooser, JDateChooser endDateChooser, JTextField periodLengthField, JPanel chartPanel) throws IOException {
     PolygonClient client = new PolygonClient();
 
     StockChartFactory stockChartFactory = new StockChartFactory();
@@ -22,6 +22,7 @@ public class EventHandlers {
       JOptionPane.showMessageDialog(frame, "Request limit exceeded: Try again once counter goes below 5.");
       return;
     }
+
     long currentTime = System.currentTimeMillis();
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 
@@ -38,14 +39,18 @@ public class EventHandlers {
     Date startDate = startDateChooser.getDate();
     Date endDate = endDateChooser.getDate();
 
-    if (startDate == null || endDate == null) {
-      JOptionPane.showMessageDialog(frame, "Please select both start and end dates.");
+    NewsClient newsClient = new NewsClient();
+    newsClient.newsRetriever(stock.getTicker());
+
+    if (startDate.getTime() > endDate.getTime()) {
+      JOptionPane.showMessageDialog(frame, "The start date cannot be later than the end date. Please select a start date that is earlier than or the same as the end date.");
       return;
     }
 
     try {
       // If retrieval hasn't been attempted yet then boolean will be false, so in that case, retrieve data
       // Saves double retrieval
+      assert stock != null;
       if (!stock.isRetrievalSuccess()) {
         client.retrieveStockData(stock, twoYearsPrior, today);
         UI.requestTimestamps.add(currentTime);
@@ -96,7 +101,7 @@ public class EventHandlers {
         stockBox.addItem(stock);
       }
     } else {
-      JOptionPane.showMessageDialog(frame, "Please select a panel.");
+      JOptionPane.showMessageDialog(frame, "Index scraping error, please try again.");
     }
     return stockList;
   }

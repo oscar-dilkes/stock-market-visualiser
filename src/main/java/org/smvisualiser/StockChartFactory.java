@@ -5,6 +5,7 @@ import org.jfree.chart.axis.DateAxis;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.labels.StandardXYToolTipGenerator;
 import org.jfree.chart.plot.CombinedDomainXYPlot;
+import org.jfree.chart.plot.ValueMarker;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.CandlestickRenderer;
 import org.jfree.chart.renderer.xy.XYBarRenderer;
@@ -30,7 +31,7 @@ public class StockChartFactory {
     TimeSeriesCollection volumeDataset = createVolumeDataset(stock, from, to);
     TimeSeriesCollection rsiDataset = createRSIDataset(stock, from, to);
 
-    return createCombinedChart(candlestickDataset, volumeDataset, rsiDataset, isMa, periodLength, stock, from, to, frame);
+    return createCombinedChart(candlestickDataset, volumeDataset, rsiDataset, isMa, periodLength, stock, from, to);
   }
 
   private OHLCSeriesCollection createCandlestickDataset(Stock stock,JFrame frame, Date from, Date to) {
@@ -90,7 +91,7 @@ public class StockChartFactory {
     return rsiDataset;
   }
 
-  private JFreeChart createCombinedChart(OHLCSeriesCollection candlestickDataset, TimeSeriesCollection volumeDataset, TimeSeriesCollection rsiDataset, boolean isMa, int periodLength, Stock stock, Date from, Date to, JFrame frame) {
+  private JFreeChart createCombinedChart(OHLCSeriesCollection candlestickDataset, TimeSeriesCollection volumeDataset, TimeSeriesCollection rsiDataset, boolean isMa, int periodLength, Stock stock, Date from, Date to) {
     DateAxis dateAxis = new DateAxis("Time");
     dateAxis.setDateFormatOverride(new SimpleDateFormat("dd-MM-yyyy"));
     dateAxis.setLowerMargin(0.02);
@@ -108,7 +109,7 @@ public class StockChartFactory {
 
     if (isMa) {
       TimeSeriesCollection maDataset = createMADataset(stock, from, to, periodLength);
-      addMAToPlot(candlestickPlot, maDataset, periodLength);
+      addMAToPlot(candlestickPlot, maDataset);
     }
 
     JFreeChart chart = new JFreeChart(
@@ -167,7 +168,19 @@ public class StockChartFactory {
     XYPlot plot = new XYPlot(dataset, null, rsiAxis, renderer);
     plot.setBackgroundPaint(Color.white);
 
+    // Create and add the ValueMarkers for y = 70 and y = 30
+    addHorizontalLine(plot, 70, Color.RED, new BasicStroke(1.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{5.0f}, 0.0f));
+    addHorizontalLine(plot, 30, Color.BLUE, new BasicStroke(1.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{5.0f}, 0.0f));
+
+
     return plot;
+  }
+
+  private void addHorizontalLine(XYPlot plot, double value, Color color, Stroke stroke) {
+    ValueMarker marker = new ValueMarker(value);
+    marker.setPaint(color);
+    marker.setStroke(stroke);
+    plot.addRangeMarker(marker);
   }
 
   private TimeSeriesCollection createMADataset(Stock stock, Date from, Date to, int periodLength) {
@@ -185,7 +198,7 @@ public class StockChartFactory {
     return dataset;
   }
 
-  private void addMAToPlot(XYPlot plot, TimeSeriesCollection maDataset, int periodLength) {
+  private void addMAToPlot(XYPlot plot, TimeSeriesCollection maDataset) {
     XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer(true, false);
     renderer.setSeriesPaint(0, Color.BLUE);
     plot.setDataset(1, maDataset);

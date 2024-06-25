@@ -80,7 +80,7 @@ public class UI {
 
     submitButton.addActionListener(e -> {
       try {
-        eventHandlers.handleSubmit(frame, stockBox, startDateChooser, endDateChooser, showMA, periodLengthField, chartPanel);
+        eventHandlers.handleSubmit(frame, stockBox, startDateChooser, endDateChooser, periodLengthField, chartPanel);
       } catch (IOException ex) {
         throw new RuntimeException(ex);
       }

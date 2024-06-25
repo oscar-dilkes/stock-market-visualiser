@@ -51,7 +51,7 @@ public class IndexWikipediaScraper {
         System.out.println("Table not found.");
       }
     } catch (IOException ex) {
-      ex.printStackTrace();
+      return null;
     }
     return stockList;
   }

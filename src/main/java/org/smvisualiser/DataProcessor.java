@@ -1,6 +1,5 @@
 package org.smvisualiser;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -67,26 +66,30 @@ public class DataProcessor {
     return rsiValues;
   }
 
-  public List<MAValue> SMACalculator (List<StockDataPoint> dataPoints, int duration) {
+  public List<MAValue> SMACalculator(List<StockDataPoint> dataPoints, int duration) {
     List<MAValue> maValues = new ArrayList<>();
 
-    double initialVal = dataPoints.get(0).getClosePrice();
-    double maDividend = initialVal;
+    if (dataPoints.size() < duration) {
+      return maValues; // Not enough data points to calculate SMA
+    }
 
-    int x = Math.min(duration, dataPoints.size());
+    double maDividend = 0.0;
 
-    for (int i = 1; i < x; i++) {
+    // Calculate the sum of the first 'duration' points
+    for (int i = 0; i < duration; i++) {
       maDividend += dataPoints.get(i).getClosePrice();
     }
 
+    // Add the first SMA value
+    maValues.add(new MAValue(maDividend / duration, dataPoints.get(duration - 1).getTimestamp()));
+
+    // Calculate the rest of the SMA values
     for (int i = duration; i < dataPoints.size(); i++) {
-      maDividend = maDividend - initialVal + dataPoints.get(i).getClosePrice();
-      initialVal = dataPoints.get(i - duration).getClosePrice();
-      maValues.add(new MAValue(maDividend/duration, dataPoints.get(i).getTimestamp()));
+      maDividend = maDividend - dataPoints.get(i - duration).getClosePrice() + dataPoints.get(i).getClosePrice();
+      maValues.add(new MAValue(maDividend / duration, dataPoints.get(i).getTimestamp()));
     }
 
     return maValues;
-
   }
 
 }
