@@ -6,6 +6,14 @@
 - Build robust, regular, and disciplined version control practices
 - Moving beyond using the terminal as UI
 
+## Next Steps
+- Improve modularity of code
+- Complete in depth testing suite
+- Transfer to React UI using Java REST backend
+- Add more financial indicators
+- Add more customisability with stock choice
+- Implement trade simulation
+
 ## Tech Stack
 
 - **Programming Language:** Java
